@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		57AF05D22E145F7200C54B11 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 57AF05D12E145F7200C54B11 /* FirebaseAnalytics */; };
+		57AF05D42E145F7200C54B11 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = 57AF05D32E145F7200C54B11 /* FirebaseVertexAI */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		57739F0D2E1318F500CFB30B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				57AF05D22E145F7200C54B11 /* FirebaseAnalytics in Frameworks */,
+				57AF05D42E145F7200C54B11 /* FirebaseVertexAI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +119,8 @@
 			);
 			name = pocketscale;
 			packageProductDependencies = (
+				57AF05D12E145F7200C54B11 /* FirebaseAnalytics */,
+				57AF05D32E145F7200C54B11 /* FirebaseVertexAI */,
 			);
 			productName = pocketscale;
 			productReference = 57739EFF2E1318F300CFB30B /* pocketscale.app */;
@@ -195,6 +204,9 @@
 			);
 			mainGroup = 57739EF62E1318F300CFB30B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				57AF05D02E145F7200C54B11 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 57739F002E1318F300CFB30B /* Products */;
 			projectDirPath = "";
@@ -400,6 +412,8 @@
 				DEVELOPMENT_TEAM = CS8BA285Y7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "PocketScale needs camera access to take photos of food for weight analysis.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PocketScale needs photo library access to select images of food for weight analysis.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -428,6 +442,8 @@
 				DEVELOPMENT_TEAM = CS8BA285Y7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "PocketScale needs camera access to take photos of food for weight analysis.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PocketScale needs photo library access to select images of food for weight analysis.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -558,6 +574,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		57AF05D02E145F7200C54B11 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.15.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		57AF05D12E145F7200C54B11 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 57AF05D02E145F7200C54B11 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		57AF05D32E145F7200C54B11 /* FirebaseVertexAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 57AF05D02E145F7200C54B11 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseVertexAI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 57739EF72E1318F300CFB30B /* Project object */;
 }

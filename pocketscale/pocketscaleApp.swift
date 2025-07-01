@@ -7,9 +7,16 @@
 //
 
 import SwiftUI
+import FirebaseCore
+import FirebaseVertexAI
 
 @main
 struct pocketscaleApp: App {
+    init() {
+        // Configure Firebase
+        FirebaseApp.configure()
+    }
+    
     var body: some Scene {
         WindowGroup {
             MainView()

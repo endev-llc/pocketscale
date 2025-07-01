@@ -6,12 +6,20 @@
 //
 
 import SwiftUI
+import AVFoundation
 
 struct MainView: View {
+    @StateObject private var geminiService = GeminiService()
     @State private var isWeighing = false
     @State private var showWeight = false
     @State private var currentWeight = 0.0
-    @State private var scaleLines: [Double] = []
+    @State private var capturedImage: UIImage?
+    @State private var showingImagePicker = false
+    @State private var showingCamera = false
+    @State private var analysisResult: WeightAnalysisResponse?
+    @State private var errorMessage: String?
+    @State private var showingError = false
+    @State private var showingActionSheet = false
 
     var body: some View {
         ZStack {
@@ -52,7 +60,7 @@ struct MainView: View {
 
                 // Instructional text (only when not weighing and not showing results)
                 if !isWeighing && !showWeight {
-                    Text("Center item in camera view")
+                    Text(capturedImage == nil ? "Take a photo to weigh food" : "Image ready for analysis")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.primary)
                         .padding(.bottom, 24)
@@ -67,14 +75,34 @@ struct MainView: View {
                         .shadow(color: .black.opacity(0.05), radius: 40, x: 0, y: 20)
                         .frame(width: 320, height: 320)
 
-                    // Strawberries image filling the entire rounded rectangle
-                    Image("strawberries")
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 320, height: 320)
-                        .clipShape(RoundedRectangle(cornerRadius: 24))
-                        .scaleEffect(isWeighing ? 1.05 : 1.0)
-                        .animation(.easeInOut(duration: 0.5), value: isWeighing)
+                    // Image display area
+                    Group {
+                        if let image = capturedImage {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 320, height: 320)
+                                .clipShape(RoundedRectangle(cornerRadius: 24))
+                                .scaleEffect(isWeighing ? 1.05 : 1.0)
+                                .animation(.easeInOut(duration: 0.5), value: isWeighing)
+                        } else {
+                            // Placeholder when no image
+                            VStack(spacing: 16) {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 40, weight: .light))
+                                    .foregroundColor(.secondary)
+                                Text("Tap to add photo")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(width: 320, height: 320)
+                        }
+                    }
+                    .onTapGesture {
+                        if !isWeighing {
+                            showingActionSheet = true
+                        }
+                    }
 
                     // Scale platform border with subtle gradient
                     RoundedRectangle(cornerRadius: 24)
@@ -88,41 +116,43 @@ struct MainView: View {
                         )
                         .frame(width: 320, height: 320)
 
-                    // Scale weighing surface pattern (more scale-like)
-                    ZStack {
-                        // Concentric circles for scale-like appearance
-                        ForEach([60, 120, 180, 240], id: \.self) { diameter in
-                            Circle()
-                                .stroke(Color(.tertiaryLabel).opacity(0.1), lineWidth: 0.5)
-                                .frame(width: CGFloat(diameter), height: CGFloat(diameter))
-                        }
-
-                        // Radial measurement marks
-                        ForEach(0..<8, id: \.self) { index in
-                            Rectangle()
-                                .fill(Color(.tertiaryLabel).opacity(isWeighing ? 0.4 : 0.1))
-                                .frame(width: 1, height: 12)
-                                .offset(y: -100)
-                                .rotationEffect(.degrees(Double(index) * 45))
-                                .animation(.easeInOut(duration: 0.6).delay(Double(index) * 0.1), value: isWeighing)
-                        }
-
-                        // Center measurement grid (refined)
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: 5), spacing: 20) {
-                            ForEach(0..<25, id: \.self) { index in
+                    // Scale weighing surface pattern (more scale-like) - only show when there's an image
+                    if capturedImage != nil {
+                        ZStack {
+                            // Concentric circles for scale-like appearance
+                            ForEach([60, 120, 180, 240], id: \.self) { diameter in
                                 Circle()
-                                    .fill(Color(.tertiaryLabel))
-                                    .frame(width: isWeighing ? 2.5 : 1.5, height: isWeighing ? 2.5 : 1.5)
-                                    .opacity(isWeighing ? 0.6 : 0.12)
-                                    .scaleEffect(isWeighing ? 1.0 : 0.8)
-                                    .animation(
-                                        .easeInOut(duration: 0.6)
-                                        .delay(Double(index) * 0.03),
-                                        value: isWeighing
-                                    )
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+                                    .frame(width: CGFloat(diameter), height: CGFloat(diameter))
                             }
+
+                            // Radial measurement marks
+                            ForEach(0..<8, id: \.self) { index in
+                                Rectangle()
+                                    .fill(Color.white.opacity(isWeighing ? 0.6 : 0.3))
+                                    .frame(width: 1, height: 12)
+                                    .offset(y: -100)
+                                    .rotationEffect(.degrees(Double(index) * 45))
+                                    .animation(.easeInOut(duration: 0.6).delay(Double(index) * 0.1), value: isWeighing)
+                            }
+
+                            // Center measurement grid (refined)
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: 5), spacing: 20) {
+                                ForEach(0..<25, id: \.self) { index in
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: isWeighing ? 2.5 : 1.5, height: isWeighing ? 2.5 : 1.5)
+                                        .opacity(isWeighing ? 0.8 : 0.4)
+                                        .scaleEffect(isWeighing ? 1.0 : 0.8)
+                                        .animation(
+                                            .easeInOut(duration: 0.6)
+                                            .delay(Double(index) * 0.03),
+                                            value: isWeighing
+                                        )
+                                }
+                            }
+                            .frame(width: 140, height: 140)
                         }
-                        .frame(width: 140, height: 140)
                     }
 
                     // Status display during weighing
@@ -155,12 +185,12 @@ struct MainView: View {
                 .padding(.bottom, 32)
 
                 // Accuracy indicator (only when not weighing and not showing results)
-                if !isWeighing && !showWeight {
+                if !isWeighing && !showWeight && capturedImage != nil {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.seal.fill")
                             .foregroundColor(.green)
                             .font(.system(size: 16))
-                        Text("±0.1g precision")
+                        Text("AI-Powered Analysis")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.secondary)
                     }
@@ -168,7 +198,7 @@ struct MainView: View {
                 }
 
                 // Weight results panel
-                if showWeight {
+                if showWeight, let result = analysisResult {
                     VStack(spacing: 24) {
                         // Status indicator
                         HStack {
@@ -183,7 +213,7 @@ struct MainView: View {
 
                         // Primary weight display - improved readability
                         HStack(alignment: .bottom, spacing: 8) {
-                            Text("\(String(format: "%.1f", currentWeight))")
+                            Text("\(String(format: "%.1f", Double(result.total_weight_grams) * 0.035274))")
                                 .font(.system(size: 58, weight: .light, design: .rounded))
                                 .foregroundColor(.primary)
                                 .kerning(-1)
@@ -192,7 +222,7 @@ struct MainView: View {
                                 Text("oz")
                                     .font(.system(size: 22, weight: .medium))
                                     .foregroundColor(.secondary)
-                                Text("(\(String(format: "%.0f", currentWeight * 28.35))g)")
+                                Text("(\(result.total_weight_grams)g)")
                                     .font(.system(size: 14, weight: .regular))
                                     .foregroundColor(.secondary)
                             }
@@ -209,7 +239,7 @@ struct MainView: View {
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundColor(.secondary)
                                         .tracking(1)
-                                    Text("Fresh Strawberries")
+                                    Text(result.food_items.first?.name ?? "Unknown")
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.primary)
                                 }
@@ -217,17 +247,17 @@ struct MainView: View {
                                 Spacer()
 
                                 VStack(alignment: .trailing, spacing: 4) {
-                                    Text("ACCURACY")
+                                    Text("CONFIDENCE")
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundColor(.secondary)
                                         .tracking(1)
                                     HStack(spacing: 4) {
                                         Circle()
-                                            .fill(Color.green)
+                                            .fill(confidenceColor(result.confidence_percentage))
                                             .frame(width: 6, height: 6)
-                                        Text("97%")
+                                        Text("\(result.confidence_percentage)%")
                                             .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.green)
+                                            .foregroundColor(confidenceColor(result.confidence_percentage))
                                     }
                                 }
                             }
@@ -248,12 +278,7 @@ struct MainView: View {
                                     .cornerRadius(14)
                                 }
 
-                                Button(action: {
-                                    withAnimation(.spring()) {
-                                        showWeight = false
-                                        isWeighing = false
-                                    }
-                                }) {
+                                Button(action: resetView) {
                                     Image(systemName: "arrow.clockwise")
                                         .font(.system(size: 18, weight: .medium))
                                         .foregroundColor(.blue)
@@ -277,80 +302,165 @@ struct MainView: View {
 
                 Spacer()
 
-                // Elegant Tap to Weigh button (when not showing results)
+                // Elegant buttons (when not showing results)
                 if !showWeight {
-                    Button(action: startMeasurement) {
-                        HStack(spacing: 12) {
-                            if isWeighing {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                                Text("Measuring...")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
-                            } else {
-                                Image(systemName: "scale.3d")
-                                    .font(.system(size: 20, weight: .medium))
-                                    .foregroundColor(.white)
-                                Text("Tap to Weigh")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
+                    VStack(spacing: 12) {
+                        // Take Photo / Analyze button
+                        if capturedImage == nil {
+                            Button(action: { showingActionSheet = true }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundColor(.white)
+                                    Text("Take Photo")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.white)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.green, Color.green.opacity(0.8)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                                .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
                             }
+                        } else {
+                            Button(action: startMeasurement) {
+                                HStack(spacing: 12) {
+                                    if isWeighing {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .scaleEffect(0.8)
+                                        Text("Analyzing...")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    } else {
+                                        Image(systemName: "scale.3d")
+                                            .font(.system(size: 20, weight: .medium))
+                                            .foregroundColor(.white)
+                                        Text("Analyze Weight")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.blue.opacity(0.8)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                                .scaleEffect(isWeighing ? 0.98 : 1.0)
+                                .animation(.easeInOut(duration: 0.2), value: isWeighing)
+                            }
+                            .disabled(isWeighing)
+                            
+                            // Retake photo button
+                            Button(action: { showingActionSheet = true }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "camera.rotate")
+                                        .font(.system(size: 16, weight: .medium))
+                                    Text("Retake Photo")
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                                .background(Color(.tertiarySystemBackground))
+                                .cornerRadius(12)
+                            }
+                            .disabled(isWeighing)
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            LinearGradient(
-                                colors: [Color.blue, Color.blue.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .cornerRadius(16)
-                        .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
-                        .scaleEffect(isWeighing ? 0.98 : 1.0)
-                        .animation(.easeInOut(duration: 0.2), value: isWeighing)
                     }
-                    .disabled(isWeighing)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 50)
                 }
             }
         }
-        .onAppear {
-            // Auto-demo after 2 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                startMeasurement()
-            }
+        .sheet(isPresented: $showingCamera) {
+            CameraView(image: $capturedImage, isPresented: $showingCamera)
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ImagePicker(image: $capturedImage, isPresented: $showingImagePicker, sourceType: .photoLibrary)
+        }
+        .actionSheet(isPresented: $showingActionSheet) {
+            ActionSheet(
+                title: Text("Select Photo"),
+                buttons: [
+                    .default(Text("Camera")) {
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            showingCamera = true
+                        }
+                    },
+                    .default(Text("Photo Library")) {
+                        showingImagePicker = true
+                    },
+                    .cancel()
+                ]
+            )
+        }
+        .alert("Error", isPresented: $showingError) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage ?? "An unknown error occurred")
+        }
+    }
+    
+    private func confidenceColor(_ confidence: Int) -> Color {
+        if confidence >= 80 {
+            return .green
+        } else if confidence >= 60 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+    
+    private func resetView() {
+        withAnimation(.spring()) {
+            showWeight = false
+            isWeighing = false
+            capturedImage = nil
+            analysisResult = nil
         }
     }
 
     private func startMeasurement() {
+        guard let image = capturedImage else { return }
+        
         withAnimation(.easeInOut(duration: 0.3)) {
             isWeighing = true
         }
 
-        // Simulate measurement process
-        let startTime = Date()
-
-        func updateWeight() {
-            let elapsed = Date().timeIntervalSince(startTime)
-
-            if elapsed < 2.8 {
-                currentWeight = Double.random(in: 5.8...6.4)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    updateWeight()
+        Task {
+            do {
+                let result = try await geminiService.analyzeFood(image: image)
+                
+                await MainActor.run {
+                    self.analysisResult = result
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        self.isWeighing = false
+                        self.showWeight = true
+                    }
                 }
-            } else {
-                currentWeight = 13.1
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                    isWeighing = false
-                    showWeight = true
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.showingError = true
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        self.isWeighing = false
+                    }
                 }
             }
         }
-
-        updateWeight()
     }
 }
 
