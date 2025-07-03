@@ -242,6 +242,9 @@ struct MainView: View {
                                     Text(result.overall_food_item)
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.primary)
+                                        .lineLimit(nil)
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
 
                                 Spacer()

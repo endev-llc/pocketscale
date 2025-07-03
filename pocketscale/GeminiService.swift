@@ -70,12 +70,43 @@ class GeminiService: ObservableObject {
         )
     }
     
+    // Compress image before sending to API
+    private func compressImage(_ image: UIImage) -> UIImage? {
+        // First, resize if the image is too large (optional but recommended)
+        let maxDimension: CGFloat = 1024
+        let scale = min(maxDimension / image.size.width, maxDimension / image.size.height)
+        
+        if scale < 1 {
+            let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            UIGraphicsBeginImageContextWithOptions(newSize, false, 0.0)
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+            let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            
+            // Compress the resized image
+            if let resized = resizedImage,
+               let compressedData = resized.jpegData(compressionQuality: 0.9) {
+                return UIImage(data: compressedData)
+            }
+        }
+        
+        // If no resizing needed, just compress
+        if let compressedData = image.jpegData(compressionQuality: 0.9) {
+            return UIImage(data: compressedData)
+        }
+        
+        return image // Return original if compression fails
+    }
+    
     func analyzeFood(image: UIImage) async throws -> WeightAnalysisResponse {
         do {
-            // Send the text prompt and image directly to generateContent
+            // Compress the image before sending
+            let compressedImage = compressImage(image) ?? image
+            
+            // Send the text prompt and compressed image to generateContent
             let response = try await model.generateContent(
                 "Analyze and provide me with the weight of the item from the attached image.",
-                image
+                compressedImage
             )
             
             guard let responseText = response.text else {
