@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		57803EB12E1645B500A72BE8 /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 57803EB02E1645B500A72BE8 /* Config.xcconfig */; };
 		57AF05D22E145F7200C54B11 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 57AF05D12E145F7200C54B11 /* FirebaseAnalytics */; };
 		57AF05D42E145F7200C54B11 /* FirebaseVertexAI in Frameworks */ = {isa = PBXBuildFile; productRef = 57AF05D32E145F7200C54B11 /* FirebaseVertexAI */; };
 /* End PBXBuildFile section */
@@ -32,11 +33,25 @@
 		57739EFF2E1318F300CFB30B /* pocketscale.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = pocketscale.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		57739F0C2E1318F500CFB30B /* pocketscaleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = pocketscaleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		57739F162E1318F500CFB30B /* pocketscaleUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = pocketscaleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		57803EB02E1645B500A72BE8 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		57803EB32E1646F000A72BE8 /* Exceptions for "pocketscale" folder in "pocketscale" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 57739EFE2E1318F300CFB30B /* pocketscale */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		57739F012E1318F300CFB30B /* pocketscale */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				57803EB32E1646F000A72BE8 /* Exceptions for "pocketscale" folder in "pocketscale" target */,
+			);
 			path = pocketscale;
 			sourceTree = "<group>";
 		};
@@ -82,6 +97,7 @@
 		57739EF62E1318F300CFB30B = {
 			isa = PBXGroup;
 			children = (
+				57803EB02E1645B500A72BE8 /* Config.xcconfig */,
 				57739F012E1318F300CFB30B /* pocketscale */,
 				57739F0F2E1318F500CFB30B /* pocketscaleTests */,
 				57739F192E1318F500CFB30B /* pocketscaleUITests */,
@@ -224,6 +240,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				57803EB12E1645B500A72BE8 /* Config.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -283,6 +300,7 @@
 /* Begin XCBuildConfiguration section */
 		57739F1E2E1318F500CFB30B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 57803EB02E1645B500A72BE8 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -347,6 +365,7 @@
 		};
 		57739F1F2E1318F500CFB30B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 57803EB02E1645B500A72BE8 /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -412,6 +431,7 @@
 				DEVELOPMENT_TEAM = CS8BA285Y7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = pocketscale/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "PocketScale needs camera access to take photos of food for weight analysis.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PocketScale needs photo library access to select images of food for weight analysis.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -442,6 +462,7 @@
 				DEVELOPMENT_TEAM = CS8BA285Y7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = pocketscale/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "PocketScale needs camera access to take photos of food for weight analysis.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "PocketScale needs photo library access to select images of food for weight analysis.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

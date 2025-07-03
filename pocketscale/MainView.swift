@@ -9,7 +9,7 @@ import SwiftUI
 import AVFoundation
 
 struct MainView: View {
-    @StateObject private var geminiService = GeminiService()
+    @StateObject private var anthropicService = try! AnthropicWeightService()
     @State private var isWeighing = false
     @State private var showWeight = false
     @State private var currentWeight = 0.0
@@ -442,7 +442,7 @@ struct MainView: View {
 
         Task {
             do {
-                let result = try await geminiService.analyzeFood(image: image)
+                let result = try await anthropicService.analyzeFood(image: image)
                 
                 await MainActor.run {
                     self.analysisResult = result
