@@ -239,7 +239,7 @@ struct MainView: View {
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundColor(.secondary)
                                         .tracking(1)
-                                    Text(result.food_items.first?.name ?? "Unknown")
+                                    Text(result.overall_food_item)
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.primary)
                                 }

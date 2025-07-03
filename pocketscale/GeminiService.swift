@@ -9,13 +9,14 @@ import Foundation
 import FirebaseAI
 import UIKit
 
-struct FoodItem: Codable {
+struct ConstituentFoodItem: Codable {
     let name: String
     let weight_grams: Int
 }
 
 struct WeightAnalysisResponse: Codable {
-    let food_items: [FoodItem]
+    let overall_food_item: String
+    let constituent_food_items: [ConstituentFoodItem]
     let total_weight_grams: Int
     let confidence_percentage: Int
 }
@@ -32,12 +33,13 @@ class GeminiService: ObservableObject {
         let systemInstruction = ModelContent(
             role: "system",
             parts: """
-            You are the underlying scanner technology for the iOS app PocketScale. Your job is to analyze food images you're provided and assign the food item from each image a PRECISE and ACCURATE weight in grams. Every weight you assign must be provided in the form of a SINGLE NUMBER, NOT a range.
-            
+            You are the underlying scanner technology for the iOS app PocketScale. Your job is to analyze food images you're provided and assign the overall food item from each image a PRECISE and ACCURATE weight in grams. Every weight you assign must be provided in the form of a SINGLE NUMBER, NOT a range.
+
             CRITICAL: YOU MUST RESPOND ONLY WITH VALID JSON IN THE EXACT FORMAT BELOW:
-            
+
             {
-              "food_items": [
+              "overall_food_item": "overall dish name",
+              "constituent_food_items": [
                 {
                   "name": "food item name",
                   "weight_grams": 0
@@ -46,22 +48,23 @@ class GeminiService: ObservableObject {
               "total_weight_grams": 0,
               "confidence_percentage": 0
             }
-            
+
             RESPONSE REQUIREMENTS:
-            
+
             Respond ONLY with valid JSON - no additional text, explanations, or formatting
-            For "food_items": List the primary food item(s) contained in the image. If the food item is a multi-ingredient dish with a known name, list that instead of each of its constituents
+            For "overall_food_item": Provide a single, elegant name for the overall food item or dish.
+            For "constituent_food_items": List the primary food item(s) contained in the image. If the food item is a multi-ingredient dish with a known name, list that instead of each of its constituents.
             For "weight_grams": Provide a single integer number (no decimals, no ranges)
-            For "total_weight_grams": Provide the combined total weight in grams of all food items as a single integer
-            For "confidence_percentage": Provide a single integer from 0-100 representing your confidence in the weight calculation
-            All field names must match exactly as shown above
-            All values must be appropriate data types (strings for names, integers for weights and confidence)
+            For "total_weight_grams": Provide the combined total weight in grams of all food items as a single integer.
+            For "confidence_percentage": Provide a single integer from 0-100 representing your confidence in the weight calculation.
+            All field names must match exactly as shown above.
+            All values must be appropriate data types (strings for names, integers for weights and confidence).
             """
         )
         
         // Initialize the Gemini model using FirebaseAI
         model = FirebaseAI.firebaseAI().generativeModel(
-            modelName: "gemini-2.5-pro",
+            modelName: "gemini-2.5-flash",
             generationConfig: generationConfig,
             systemInstruction: systemInstruction
         )
