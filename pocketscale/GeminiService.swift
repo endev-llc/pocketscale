@@ -26,7 +26,7 @@ class GeminiService: ObservableObject {
     
     init() {
         let generationConfig = GenerationConfig(
-            temperature: 0.1,
+            temperature: 0.0,
             responseMIMEType: "application/json"
         )
         
@@ -105,6 +105,7 @@ class GeminiService: ObservableObject {
             
             do {
                 let analysisResponse = try JSONDecoder().decode(WeightAnalysisResponse.self, from: jsonData)
+                print("API Response: \(analysisResponse)")
                 return analysisResponse
             } catch {
                 print("JSON Parsing Error: \(error)")
