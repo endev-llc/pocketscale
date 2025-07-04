@@ -8,18 +8,25 @@
 
 import SwiftUI
 import FirebaseCore
-import FirebaseVertexAI
+import FirebaseAuth
 
 @main
 struct pocketscaleApp: App {
+    
+    // Create an instance of the observer. SwiftUI will keep this object alive.
+    @StateObject private var authStateObserver = AuthStateObserver()
+    
     init() {
-        // Configure Firebase
         FirebaseApp.configure()
     }
-    
+
     var body: some Scene {
         WindowGroup {
-            MainView()
+            if authStateObserver.user != nil {
+                MainView()
+            } else {
+                AuthView()
+            }
         }
     }
 }

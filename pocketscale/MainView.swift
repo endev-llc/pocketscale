@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import FirebaseAuth
 
 struct MainView: View {
     @StateObject private var geminiService = GeminiService()
@@ -20,6 +21,9 @@ struct MainView: View {
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var showingActionSheet = false
+    
+    // New state to control the settings menu popover
+    @State private var showingSettings = false
 
     var body: some View {
         ZStack {
@@ -48,10 +52,18 @@ struct MainView: View {
 
                     Spacer()
 
-                    Button(action: {}) {
+                    // Updated button to toggle the settings menu
+                    Button(action: {
+                        showingSettings.toggle()
+                    }) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 20, weight: .ultraLight))
                             .foregroundColor(.secondary)
+                    }
+                    // Popover menu for settings
+                    .popover(isPresented: $showingSettings) {
+                        settingsMenu
+                            .presentationCompactAdaptation(.popover)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -417,6 +429,23 @@ struct MainView: View {
         }
     }
     
+    // Extracted settings menu view
+    private var settingsMenu: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button(action: {
+                signOut()
+                showingSettings = false // Dismiss the popover
+            }) {
+                HStack {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                    Text("Sign Out")
+                }
+                .foregroundColor(.red)
+                .padding()
+            }
+        }
+    }
+    
     private func confidenceColor(_ confidence: Int) -> Color {
         if confidence >= 80 {
             return .green
@@ -463,6 +492,18 @@ struct MainView: View {
                     }
                 }
             }
+        }
+    }
+    
+    // New function to handle signing out
+    private func signOut() {
+        do {
+            try Auth.auth().signOut()
+        } catch let signOutError as NSError {
+            // Present an error to the user if sign-out fails.
+            self.errorMessage = "Error signing out: \(signOutError.localizedDescription)"
+            self.showingError = true
+            print("Error signing out: %@", signOutError)
         }
     }
 }
