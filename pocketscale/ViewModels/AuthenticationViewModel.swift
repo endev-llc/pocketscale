@@ -5,7 +5,6 @@
 //  Created by Jake Adams on 7/4/25.
 //
 
-
 import Foundation
 import AuthenticationServices
 import FirebaseAuth
@@ -56,15 +55,32 @@ class AuthenticationViewModel: ObservableObject {
                 guard let user = authResult?.user else { return }
                 
                 let db = Firestore.firestore()
-                db.collection("users").document(user.uid).setData([
-                    "uid": user.uid,
-                    "email": user.email ?? "",
-                    "name": user.displayName ?? "",
-                    "isAppleUser": true,
-                    "signUpTime": Timestamp(date: Date())
-                ]) { err in
-                    if let err = err {
-                        self.errorMessage = "Error writing document: \(err)"
+                let userDoc = db.collection("users").document(user.uid)
+                
+                // Check if user already exists
+                userDoc.getDocument { (document, error) in
+                    if let error = error {
+                        self.errorMessage = "Error checking user document: \(error)"
+                        return
+                    }
+                    
+                    if let document = document, document.exists {
+                        // User already exists, don't overwrite subscription status
+                        print("User already exists, not updating subscription status")
+                    } else {
+                        // New user, create document with default subscription status
+                        userDoc.setData([
+                            "uid": user.uid,
+                            "email": user.email ?? "",
+                            "name": user.displayName ?? "",
+                            "isAppleUser": true,
+                            "signUpTime": Timestamp(date: Date()),
+                            "subscriptionStatus": "free"  // Default to free for new users
+                        ]) { err in
+                            if let err = err {
+                                self.errorMessage = "Error writing document: \(err)"
+                            }
+                        }
                     }
                 }
             }

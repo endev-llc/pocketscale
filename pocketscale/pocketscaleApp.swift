@@ -4,7 +4,6 @@
 //
 //  Created by Jake Adams on 6/30/25.
 //
-//
 
 import SwiftUI
 import FirebaseCore
@@ -12,9 +11,8 @@ import FirebaseAuth
 
 @main
 struct pocketscaleApp: App {
-    
-    // Create an instance of the observer. SwiftUI will keep this object alive.
     @StateObject private var authStateObserver = AuthStateObserver()
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     init() {
         FirebaseApp.configure()
@@ -22,10 +20,22 @@ struct pocketscaleApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if authStateObserver.user != nil {
-                MainView()
-            } else {
-                AuthView()
+            Group {
+                if authStateObserver.user != nil {
+                    if subscriptionManager.hasAccessToApp {
+                        MainView()
+                    } else {
+                        SubscriptionView()
+                    }
+                } else {
+                    AuthView()
+                }
+            }
+            .task {
+                // Update subscription status when app launches
+                if authStateObserver.user != nil {
+                    await subscriptionManager.updateSubscriptionStatus()
+                }
             }
         }
     }
