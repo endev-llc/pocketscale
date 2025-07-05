@@ -34,9 +34,9 @@ class GeminiService: ObservableObject {
             role: "system",
             parts: """
             You are the underlying scanner technology for the iOS app PocketScale. Your job is to analyze food images you're provided and assign the overall food item from each image a PRECISE and ACCURATE weight in grams. Every weight you assign must be provided in the form of a SINGLE NUMBER, NOT a range.
-
+            
             CRITICAL: YOU MUST RESPOND ONLY WITH VALID JSON IN THE EXACT FORMAT BELOW:
-
+            
             {
               "overall_food_item": "overall dish name",
               "constituent_food_items": [
@@ -48,9 +48,9 @@ class GeminiService: ObservableObject {
               "total_weight_grams": 0,
               "confidence_percentage": 0
             }
-
+            
             RESPONSE REQUIREMENTS:
-
+            
             Respond ONLY with valid JSON - no additional text, explanations, or formatting
             For "overall_food_item": Provide a single, elegant name for the overall food item or dish.
             For "constituent_food_items": List the primary food item(s) contained in the image. If the food item is a multi-ingredient dish with a known name, list that instead of each of its constituents.
@@ -70,38 +70,32 @@ class GeminiService: ObservableObject {
         )
     }
     
-    // Compress image before sending to API
-    private func compressImage(_ image: UIImage) -> UIImage? {
-        // First, resize if the image is too large (optional but recommended)
+    private func compressImage(_ image: UIImage) -> UIImage {
         let maxDimension: CGFloat = 1024
+        
+        // Return the original image if it's already within the desired dimensions.
+        guard image.size.width > maxDimension || image.size.height > maxDimension else {
+            return image
+        }
+        
+        // Calculate the scaling factor to maintain the aspect ratio.
         let scale = min(maxDimension / image.size.width, maxDimension / image.size.height)
+        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
         
-        if scale < 1 {
-            let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-            UIGraphicsBeginImageContextWithOptions(newSize, false, 0.0)
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-            let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
-            UIGraphicsEndImageContext()
-            
-            // Compress the resized image
-            if let resized = resizedImage,
-               let compressedData = resized.jpegData(compressionQuality: 0.9) {
-                return UIImage(data: compressedData)
-            }
-        }
+        // Resize the image.
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
         
-        // If no resizing needed, just compress
-        if let compressedData = image.jpegData(compressionQuality: 0.9) {
-            return UIImage(data: compressedData)
-        }
-        
-        return image // Return original if compression fails
+        // Return the resized image, or fallback to the original if the process fails.
+        return resizedImage ?? image
     }
     
     func analyzeFood(image: UIImage) async throws -> WeightAnalysisResponse {
         do {
             // Compress the image before sending
-            let compressedImage = compressImage(image) ?? image
+            let compressedImage = compressImage(image)
             
             // Send the text prompt and compressed image to generateContent
             let response = try await model.generateContent(
