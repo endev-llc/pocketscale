@@ -22,7 +22,7 @@ struct pocketscaleApp: App {
         WindowGroup {
             Group {
                 if authStateObserver.user != nil {
-                    if subscriptionManager.hasAccessToApp {
+                    if subscriptionManager.isLoadingStatus || subscriptionManager.hasAccessToApp {
                         MainView()
                     } else {
                         SubscriptionView()

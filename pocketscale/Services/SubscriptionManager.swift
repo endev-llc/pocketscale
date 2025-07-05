@@ -38,6 +38,7 @@ class SubscriptionManager: ObservableObject {
     
     @Published var subscriptionStatus: SubscriptionStatus = .free
     @Published var hasAccessToApp: Bool = false
+    @Published var isLoadingStatus: Bool = true
     
     private var products: [Product] = []
     private var purchaseState = Set<AnyCancellable>()
@@ -75,7 +76,10 @@ class SubscriptionManager: ObservableObject {
     
     // MARK: - Subscription Status Management
     func updateSubscriptionStatus() async {
-        guard let user = Auth.auth().currentUser else { return }
+        guard let user = Auth.auth().currentUser else {
+            self.isLoadingStatus = false
+            return
+        }
         
         // Step 1: Check Apple's subscription status (source of truth)
         let appleSubscriptionStatus = await checkAppleSubscriptionStatus()
@@ -96,12 +100,14 @@ class SubscriptionManager: ObservableObject {
             // Step 4: Update local state
             self.subscriptionStatus = finalStatus
             self.hasAccessToApp = (finalStatus == .inTrial || finalStatus == .professional)
+            self.isLoadingStatus = false
             
         } catch {
             print("Error fetching Firebase data: \(error)")
             // If Firebase fails, trust Apple's status
             self.subscriptionStatus = appleSubscriptionStatus == .professional ? .professional : .free
             self.hasAccessToApp = (appleSubscriptionStatus == .professional)
+            self.isLoadingStatus = false
         }
     }
     
