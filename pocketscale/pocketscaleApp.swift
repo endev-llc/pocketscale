@@ -31,10 +31,12 @@ struct pocketscaleApp: App {
                     AuthView()
                 }
             }
-            .task {
-                // Update subscription status when app launches
-                if authStateObserver.user != nil {
-                    await subscriptionManager.updateSubscriptionStatus()
+            .onChange(of: authStateObserver.user) { oldUser, newUser in
+                // Immediately update subscription status when user signs in
+                if oldUser == nil && newUser != nil {
+                    Task {
+                        await subscriptionManager.updateSubscriptionStatus()
+                    }
                 }
             }
         }
