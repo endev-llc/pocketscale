@@ -13,7 +13,6 @@ import Combine
 
 enum SubscriptionStatus: String, CaseIterable {
     case free = "free"
-    case inTrial = "inTrial"
     case professional = "professional"
 }
 
@@ -25,9 +24,6 @@ enum SubscriptionStatus: String, CaseIterable {
  *
  * Status Transitions:
  * - New User: "free" (no access to app)
- * - Starts Trial: "inTrial" (3-day access)
- * - Trial Converts: "professional" (full access)
- * - Trial Expires: "free" (no access unless user subscribes)
  * - User Subscribes: "professional" (full access)
  * - User Cancels: "professional" until period ends, then "free"
  */
@@ -84,31 +80,16 @@ class SubscriptionManager: ObservableObject {
         // Step 1: Check Apple's subscription status (source of truth)
         let appleSubscriptionStatus = await checkAppleSubscriptionStatus()
         
-        // Step 2: Get current Firebase data for trial information
-        do {
-            let document = try await Firestore.firestore().collection("users").document(user.uid).getDocument()
-            let data = document.data()
-            
-            let finalStatus = await determineFinalStatus(
-                appleStatus: appleSubscriptionStatus,
-                firebaseData: data
-            )
-            
-            // Step 3: Update Firebase to match Apple's reality
-            await updateFirebaseSubscriptionStatus(finalStatus)
-            
-            // Step 4: Update local state
-            self.subscriptionStatus = finalStatus
-            self.hasAccessToApp = (finalStatus == .inTrial || finalStatus == .professional)
-            self.isLoadingStatus = false
-            
-        } catch {
-            print("Error fetching Firebase data: \(error)")
-            // If Firebase fails, trust Apple's status
-            self.subscriptionStatus = appleSubscriptionStatus == .professional ? .professional : .free
-            self.hasAccessToApp = (appleSubscriptionStatus == .professional)
-            self.isLoadingStatus = false
-        }
+        // Step 2: Determine final status based on Apple's status only
+        let finalStatus = determineFinalStatus(appleStatus: appleSubscriptionStatus)
+        
+        // Step 3: Update Firebase to match Apple's reality
+        await updateFirebaseSubscriptionStatus(finalStatus)
+        
+        // Step 4: Update local state
+        self.subscriptionStatus = finalStatus
+        self.hasAccessToApp = (finalStatus == .professional)
+        self.isLoadingStatus = false
     }
     
     private func checkAppleSubscriptionStatus() async -> SubscriptionStatus {
@@ -126,27 +107,13 @@ class SubscriptionManager: ObservableObject {
         return .free
     }
     
-    private func determineFinalStatus(appleStatus: SubscriptionStatus, firebaseData: [String: Any]?) async -> SubscriptionStatus {
+    private func determineFinalStatus(appleStatus: SubscriptionStatus) -> SubscriptionStatus {
         // If Apple says user has active subscription, they're professional
         if appleStatus == .professional {
             return .professional
         }
         
-        // If Apple says no active subscription, check if user is still in trial period
-        guard let data = firebaseData,
-              let trialEndTimestamp = data["trialEnd"] as? Timestamp else {
-            return .free
-        }
-        
-        let trialEndDate = trialEndTimestamp.dateValue()
-        let currentFirebaseStatus = data["subscriptionStatus"] as? String ?? "free"
-        
-        // If user was in trial and trial hasn't expired yet, keep them in trial
-        if currentFirebaseStatus == "inTrial" && Date() < trialEndDate {
-            return .inTrial
-        }
-        
-        // Trial has expired or user was never in trial, and Apple says no active subscription
+        // Otherwise, user is free
         return .free
     }
     
@@ -234,40 +201,13 @@ class SubscriptionManager: ObservableObject {
         let userDoc = db.collection("users").document(user.uid)
         
         do {
-            let document = try await userDoc.getDocument()
-            let currentData = document.data() ?? [:]
+            // User has a valid subscription - set to professional
+            try await userDoc.updateData([
+                "subscriptionStatus": "professional"
+            ])
             
-            // Check current subscription status in Firebase
-            let currentStatus = currentData["subscriptionStatus"] as? String ?? "free"
-            
-            if currentStatus == "free" {
-                // This is a new trial - user is starting their first subscription
-                let now = Date()
-                let trialEnd = Calendar.current.date(byAdding: .day, value: 3, to: now)!
-                
-                try await userDoc.updateData([
-                    "subscriptionStatus": "inTrial",
-                    "trialStart": Timestamp(date: now),
-                    "trialEnd": Timestamp(date: trialEnd)
-                ])
-                
-                self.subscriptionStatus = .inTrial
-                self.hasAccessToApp = true
-                
-            } else if currentStatus == "inTrial" {
-                // User's trial converted to paid subscription
-                try await userDoc.updateData([
-                    "subscriptionStatus": "professional"
-                ])
-                
-                self.subscriptionStatus = .professional
-                self.hasAccessToApp = true
-                
-            } else {
-                // User already has professional status, just ensure they still have access
-                self.subscriptionStatus = .professional
-                self.hasAccessToApp = true
-            }
+            self.subscriptionStatus = .professional
+            self.hasAccessToApp = true
             
             await transaction.finish()
             
