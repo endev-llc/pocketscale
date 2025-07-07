@@ -16,6 +16,9 @@ struct SubscriptionView: View {
     @State private var isLoading = false
     @State private var selectedPlan: SubscriptionPlan = .annual
     
+    // State for entry animation
+    @State private var isAnimating = false
+    
     enum SubscriptionPlan {
         case monthly
         case annual
@@ -23,120 +26,141 @@ struct SubscriptionView: View {
     
     var body: some View {
         ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
+            // Elegant gradient background that matches AuthView
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(.systemBackground),
+                    Color.accentColor.opacity(0.15),
+                    Color(.systemBackground)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Friendly Header
-                VStack(spacing: 16) {
-                    Image(systemName: "scale.3d")
-                        .font(.system(size: 40, weight: .medium))
-                        .foregroundColor(.blue)
-                        .padding(.top, 30)
-                    
-                    Text("PocketScale Pro")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.primary)
-                    
-                    Text("🎯 AI-powered mobile food scale")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.bottom, 30)
-                
-                // Core Features - improved text wrapping
-                VStack(spacing: 16) {
-                    FeatureRow(
-                        icon: "📱",
-                        title: "Camera-Based Weighing",
-                        description: "No physical scale needed—just point and weigh"
-                    )
-                    
-                    FeatureRow(
-                        icon: "🧠",
-                        title: "AI-Powered Accuracy",
-                        description: "Advanced computer vision for precise measurements"
-                    )
-                    
-                    FeatureRow(
-                        icon: "✨",
-                        title: "Always With You",
-                        description: "Your portable scale that fits in your pocket"
-                    )
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 25)
-                
-                // Compact Plans
-                VStack(spacing: 8) {
-                    CompactPlanCard(
-                        isSelected: selectedPlan == .annual,
-                        title: "Annual Plan",
-                        price: formatPrice(for: subscriptionManager.annualProduct),
-                        period: "year",
-                        badge: "⭐ " + calculateSavings(),
-                        isPopular: true,
-                        action: { selectedPlan = .annual }
-                    )
-                    
-                    CompactPlanCard(
-                        isSelected: selectedPlan == .monthly,
-                        title: "Monthly Plan",
-                        price: formatPrice(for: subscriptionManager.monthlyProduct),
-                        period: "month",
-                        badge: nil,
-                        isPopular: false,
-                        action: { selectedPlan = .monthly }
-                    )
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 20)
-                
-                // Trial Info
-                Text("🎉 3-Day Free Trial • Cancel Anytime")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 20)
-                
-                // Prominent CTA Button
-                Button(action: startSubscription) {
-                    HStack {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.9)
-                        } else {
-                            Text("Start Free Trial")
-                                .font(.system(size: 20, weight: .bold))
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // MARK: - Header Section
+                        VStack(spacing: 16) {
+                            Image(systemName: "scale.3d")
+                                .font(.system(size: 40, weight: .light)) // Adjusted weight for consistency
+                                .foregroundColor(.accentColor)
+                                .shadow(color: .accentColor.opacity(0.3), radius: 10, y: 5)
+                            
+                            Text("Try PocketScale")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(.primary)
+                            
+                            Text("🎯 AI-powered mobile food scale")
+                                .font(.system(size: 17, weight: .medium, design: .rounded))
+                                .foregroundColor(.secondary)
                         }
+                        .padding(.top, 30)
+                        .padding(.bottom, 30)
+                        .opacity(isAnimating ? 1 : 0)
+                        .offset(y: isAnimating ? 0 : -30)
+                        
+                        // MARK: - Core Features Section
+                        VStack(spacing: 16) {
+                            FeatureRow(
+                                icon: "📱",
+                                title: "Camera-Based Weighing",
+                                description: "No physical scale needed—just point and weigh"
+                            )
+                            
+                            FeatureRow(
+                                icon: "🧠",
+                                title: "AI-Powered Accuracy",
+                                description: "Advanced computer vision for precise measurements"
+                            )
+                            
+                            FeatureRow(
+                                icon: "✨",
+                                title: "Always With You",
+                                description: "Your portable scale that fits in your pocket"
+                            )
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 25)
+                        .opacity(isAnimating ? 1 : 0)
+                        .offset(y: isAnimating ? 0 : -30)
+                        .animation(.easeInOut(duration: 0.8).delay(0.2), value: isAnimating)
+
+                        // MARK: - Plans Section
+                        VStack(spacing: 8) {
+                            CompactPlanCard(
+                                isSelected: selectedPlan == .annual,
+                                title: "Annual Plan",
+                                price: formatPrice(for: subscriptionManager.annualProduct),
+                                period: "year",
+                                badge: "⭐ " + calculateSavings(),
+                                isPopular: true,
+                                action: { selectedPlan = .annual }
+                            )
+                            
+                            CompactPlanCard(
+                                isSelected: selectedPlan == .monthly,
+                                title: "Monthly Plan",
+                                price: formatPrice(for: subscriptionManager.monthlyProduct),
+                                period: "month",
+                                badge: nil,
+                                isPopular: false,
+                                action: { selectedPlan = .monthly }
+                            )
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 20)
+                        .opacity(isAnimating ? 1 : 0)
+                        .offset(y: isAnimating ? 0 : 30)
+                        .animation(.easeInOut(duration: 0.8).delay(0.4), value: isAnimating)
+
+                        // MARK: - Action Section
+                        VStack(spacing: 20) {
+                            Text("🎉 3-Day Free Trial • Cancel Anytime")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.secondary)
+                            
+                            Button(action: startSubscription) {
+                                HStack {
+                                    if isLoading {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .scaleEffect(0.9)
+                                    } else {
+                                        Text("Start Free Trial")
+                                            .font(.system(size: 20, weight: .bold))
+                                    }
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56) // Consistent height
+                                .background(Color.accentColor) // Using accent color for consistency
+                                .clipShape(Capsule()) // Consistent shape
+                                .shadow(color: .accentColor.opacity(0.4), radius: 10, y: 5)
+                            }
+                            .disabled(isLoading)
+                            
+                            Button(action: {
+                                Task { await subscriptionManager.restorePurchases() }
+                            }) {
+                                Text("Restore Purchases")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 20)
+                        .opacity(isAnimating ? 1 : 0)
+                        .offset(y: isAnimating ? 0 : 30)
+                        .animation(.easeInOut(duration: 0.8).delay(0.6), value: isAnimating)
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(18)
-                    .shadow(color: Color.blue.opacity(0.4), radius: 12, x: 0, y: 6)
                 }
-                .disabled(isLoading)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                
-                // Restore
-                Button(action: {
-                    Task { await subscriptionManager.restorePurchases() }
-                }) {
-                    Text("Restore Purchases")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.blue)
-                }
-                
-                Spacer()
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.8)) {
+                isAnimating = true
             }
         }
         .alert("Error", isPresented: $showingError) {
@@ -146,6 +170,7 @@ struct SubscriptionView: View {
         }
     }
     
+    // MARK: - Functions (Unchanged)
     private func startSubscription() {
         isLoading = true
         
@@ -190,6 +215,7 @@ struct SubscriptionView: View {
     }
 }
 
+// MARK: - Helper Views (Unchanged)
 struct CompactPlanCard: View {
     let isSelected: Bool
     let title: String
@@ -214,13 +240,7 @@ struct CompactPlanCard: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                                .background(Color.accentColor)
                                 .cornerRadius(4)
                         }
                     }
@@ -239,16 +259,16 @@ struct CompactPlanCard: View {
                 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20))
-                    .foregroundColor(isSelected ? .blue : Color(.tertiaryLabel))
+                    .foregroundColor(isSelected ? .accentColor : Color(.tertiaryLabel))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.blue.opacity(0.05) : Color(.secondarySystemBackground))
+                RoundedRectangle(cornerRadius: 12) // Slightly more rounded corners
+                    .fill(Color(.secondarySystemBackground))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
                     )
             )
         }
@@ -266,20 +286,17 @@ struct FeatureRow: View {
             Text(icon)
                 .font(.system(size: 28))
                 .frame(width: 44, height: 44)
-                .background(Color(.systemGray6))
+                .background(Color.accentColor.opacity(0.1))
                 .cornerRadius(10)
             
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
                 
                 Text(description)
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(nil)
             }
             
             Spacer()
@@ -287,6 +304,7 @@ struct FeatureRow: View {
     }
 }
 
+// MARK: - Preview
 #Preview {
     SubscriptionView()
 }
