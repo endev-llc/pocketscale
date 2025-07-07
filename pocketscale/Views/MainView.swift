@@ -499,8 +499,11 @@ struct MainView: View {
     private func signOut() {
         do {
             try Auth.auth().signOut()
+            // Refresh subscription state when signing out (will clear cache automatically)
+            Task {
+                await SubscriptionManager.shared.refreshSubscriptionStatus()
+            }
         } catch let signOutError as NSError {
-            // Present an error to the user if sign-out fails.
             self.errorMessage = "Error signing out: \(signOutError.localizedDescription)"
             self.showingError = true
             print("Error signing out: %@", signOutError)

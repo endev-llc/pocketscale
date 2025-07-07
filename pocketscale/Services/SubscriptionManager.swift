@@ -16,35 +16,26 @@ enum SubscriptionStatus: String, CaseIterable {
     case professional = "professional"
 }
 
-/*
- * Subscription Flow:
- * 1. App checks Apple's StoreKit for current subscription status (source of truth)
- * 2. App updates Firebase to match Apple's reality
- * 3. App determines user access based on final status
- *
- * Status Transitions:
- * - New User: "free" (no access to app)
- * - User Subscribes: "professional" (full access)
- * - User Cancels: "professional" until period ends, then "free"
- */
-
 @MainActor
 class SubscriptionManager: ObservableObject {
     static let shared = SubscriptionManager()
     
-    @Published var subscriptionStatus: SubscriptionStatus = .free
     @Published var hasAccessToApp: Bool = false
-    @Published var isLoadingStatus: Bool = true
     
     private var products: [Product] = []
-    private var purchaseState = Set<AnyCancellable>()
     private let monthlyProductID = "com.tech.endev.pocketscale.monthly.subscription"
     private let annualProductID = "com.tech.endev.pocketscale.annual.subscription"
     
+    // Cache key for UserDefaults
+    private let subscriptionCacheKey = "hasActiveSubscription"
+    
     private init() {
+        // Load cached status immediately (no loading screen)
+        loadCachedSubscriptionStatus()
+        
         Task {
-            await updateSubscriptionStatus()
             await loadProducts()
+            await refreshSubscriptionStatus()
         }
         
         // Listen for transaction updates
@@ -52,12 +43,57 @@ class SubscriptionManager: ObservableObject {
             for await result in StoreKit.Transaction.updates {
                 do {
                     let transaction = try checkVerified(result)
-                    await handleTransaction(transaction)
+                    await transaction.finish()
+                    await refreshSubscriptionStatus()
                 } catch {
                     print("Transaction verification failed: \(error)")
                 }
             }
         }
+    }
+    
+    // MARK: - Instant Status Loading (No Loading Screen)
+    private func loadCachedSubscriptionStatus() {
+        // Load from cache immediately - assume user has access if they had it before
+        self.hasAccessToApp = UserDefaults.standard.bool(forKey: subscriptionCacheKey)
+    }
+    
+    private func cacheSubscriptionStatus(_ hasAccess: Bool) {
+        UserDefaults.standard.set(hasAccess, forKey: subscriptionCacheKey)
+    }
+    
+    // MARK: - Background Subscription Refresh
+    func refreshSubscriptionStatus() async {
+        guard Auth.auth().currentUser != nil else {
+            await MainActor.run {
+                self.hasAccessToApp = false
+                self.cacheSubscriptionStatus(false)
+            }
+            return
+        }
+        
+        // Check Apple's subscription status in background
+        var hasActiveSubscription = false
+        
+        for await result in StoreKit.Transaction.currentEntitlements {
+            do {
+                let transaction = try checkVerified(result)
+                if transaction.productID == monthlyProductID || transaction.productID == annualProductID {
+                    hasActiveSubscription = true
+                    break
+                }
+            } catch {
+                print("Transaction verification failed: \(error)")
+            }
+        }
+        
+        await MainActor.run {
+            self.hasAccessToApp = hasActiveSubscription
+            self.cacheSubscriptionStatus(hasActiveSubscription)
+        }
+        
+        // Update Firebase for analytics (non-blocking)
+        await updateFirebaseSubscriptionStatus(hasActiveSubscription ? .professional : .free)
     }
     
     // MARK: - Product Loading
@@ -70,104 +106,25 @@ class SubscriptionManager: ObservableObject {
         }
     }
     
-    // MARK: - Subscription Status Management
-    func updateSubscriptionStatus() async {
-        guard let user = Auth.auth().currentUser else {
-            self.isLoadingStatus = false
-            return
-        }
-        
-        // Step 1: Check Apple's subscription status (source of truth)
-        let appleSubscriptionStatus = await checkAppleSubscriptionStatus()
-        
-        // Step 2: Determine final status based on Apple's status only
-        let finalStatus = determineFinalStatus(appleStatus: appleSubscriptionStatus)
-        
-        // Step 3: Update Firebase to match Apple's reality
-        await updateFirebaseSubscriptionStatus(finalStatus)
-        
-        // Step 4: Update local state
-        self.subscriptionStatus = finalStatus
-        self.hasAccessToApp = (finalStatus == .professional)
-        self.isLoadingStatus = false
-    }
-    
-    private func checkAppleSubscriptionStatus() async -> SubscriptionStatus {
-        // Check for active subscription from Apple (either monthly or annual)
-        for await result in StoreKit.Transaction.currentEntitlements {
-            do {
-                let transaction = try checkVerified(result)
-                if transaction.productID == monthlyProductID || transaction.productID == annualProductID {
-                    return .professional
-                }
-            } catch {
-                print("Transaction verification failed: \(error)")
-            }
-        }
-        return .free
-    }
-    
-    private func determineFinalStatus(appleStatus: SubscriptionStatus) -> SubscriptionStatus {
-        // If Apple says user has active subscription, they're professional
-        if appleStatus == .professional {
-            return .professional
-        }
-        
-        // Otherwise, user is free
-        return .free
-    }
-    
-    // MARK: - Free Trial
+    // MARK: - Purchase Methods
     func startFreeTrial() async throws {
-        // Default to monthly subscription for free trial
         guard let product = products.first(where: { $0.id == monthlyProductID }) else {
             throw SubscriptionError.productNotFound
         }
         
-        guard let user = Auth.auth().currentUser else {
+        guard Auth.auth().currentUser != nil else {
             throw SubscriptionError.notAuthenticated
         }
         
-        let result = try await product.purchase()
-        
-        switch result {
-        case .success(let verification):
-            let transaction = try checkVerified(verification)
-            await handleTransaction(transaction)
-            
-        case .userCancelled:
-            throw SubscriptionError.userCancelled
-            
-        case .pending:
-            throw SubscriptionError.purchasePending
-            
-        @unknown default:
-            throw SubscriptionError.unknown
-        }
+        try await purchaseProduct(product)
     }
     
-    // MARK: - Purchase Subscriptions
     func purchaseMonthlySubscription() async throws {
         guard let product = products.first(where: { $0.id == monthlyProductID }) else {
             throw SubscriptionError.productNotFound
         }
         
-        let result = try await product.purchase()
-        
-        switch result {
-        case .success(let verification):
-            let transaction = try checkVerified(verification)
-            await handleTransaction(transaction)
-            
-        case .userCancelled:
-            throw SubscriptionError.userCancelled
-            
-        case .pending:
-            throw SubscriptionError.purchasePending
-            
-        @unknown default:
-            throw SubscriptionError.unknown
-        }
+        try await purchaseProduct(product)
     }
     
     func purchaseAnnualSubscription() async throws {
@@ -175,12 +132,17 @@ class SubscriptionManager: ObservableObject {
             throw SubscriptionError.productNotFound
         }
         
+        try await purchaseProduct(product)
+    }
+    
+    private func purchaseProduct(_ product: Product) async throws {
         let result = try await product.purchase()
         
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
-            await handleTransaction(transaction)
+            await transaction.finish()
+            await refreshSubscriptionStatus()
             
         case .userCancelled:
             throw SubscriptionError.userCancelled
@@ -193,34 +155,11 @@ class SubscriptionManager: ObservableObject {
         }
     }
     
-    // MARK: - Transaction Handling
-    private func handleTransaction(_ transaction: StoreKit.Transaction) async {
-        guard let user = Auth.auth().currentUser else { return }
-        
-        let db = Firestore.firestore()
-        let userDoc = db.collection("users").document(user.uid)
-        
-        do {
-            // User has a valid subscription - set to professional
-            try await userDoc.updateData([
-                "subscriptionStatus": "professional"
-            ])
-            
-            self.subscriptionStatus = .professional
-            self.hasAccessToApp = true
-            
-            await transaction.finish()
-            
-        } catch {
-            print("Error handling transaction: \(error)")
-        }
-    }
-    
     // MARK: - Restore Purchases
     func restorePurchases() async {
         do {
             try await AppStore.sync()
-            await updateSubscriptionStatus()
+            await refreshSubscriptionStatus()
         } catch {
             print("Failed to restore purchases: \(error)")
         }
@@ -245,15 +184,19 @@ class SubscriptionManager: ObservableObject {
         }
     }
     
+    // Write subscription status to Firebase for analytics (never read from Firebase)
     private func updateFirebaseSubscriptionStatus(_ status: SubscriptionStatus) async {
         guard let user = Auth.auth().currentUser else { return }
         
         do {
             try await Firestore.firestore().collection("users").document(user.uid).updateData([
-                "subscriptionStatus": status.rawValue
+                "subscriptionStatus": status.rawValue,
+                "lastSubscriptionUpdate": Timestamp(date: Date())
             ])
+            print("Updated Firebase subscription status to: \(status.rawValue)")
         } catch {
-            print("Error updating subscription status: \(error)")
+            print("Error updating subscription status in Firebase: \(error)")
+            // Don't throw error - this is just for analytics, not critical
         }
     }
 }

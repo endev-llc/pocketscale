@@ -65,17 +65,16 @@ class AuthenticationViewModel: ObservableObject {
                     }
                     
                     if let document = document, document.exists {
-                        // User already exists, don't overwrite subscription status
-                        print("User already exists, not updating subscription status")
+                        // User already exists, no action needed
+                        print("User already exists")
                     } else {
-                        // New user, create document with default subscription status
+                        // New user, create basic profile document (no subscription status)
                         userDoc.setData([
                             "uid": user.uid,
                             "email": user.email ?? "",
                             "name": user.displayName ?? "",
                             "isAppleUser": true,
-                            "signUpTime": Timestamp(date: Date()),
-                            "subscriptionStatus": "free"  // Default to free for new users
+                            "signUpTime": Timestamp(date: Date())
                         ]) { err in
                             if let err = err {
                                 self.errorMessage = "Error writing document: \(err)"

@@ -21,8 +21,12 @@ struct pocketscaleApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if authStateObserver.user != nil {
-                    if subscriptionManager.isLoadingStatus || subscriptionManager.hasAccessToApp {
+                if authStateObserver.isLoading {
+                    // Show nothing while Firebase determines auth state (prevents flash)
+                    Color(.systemBackground)
+                        .ignoresSafeArea()
+                } else if authStateObserver.user != nil {
+                    if subscriptionManager.hasAccessToApp {
                         MainView()
                     } else {
                         SubscriptionView()
@@ -31,11 +35,13 @@ struct pocketscaleApp: App {
                     AuthView()
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: authStateObserver.user != nil)
+            .animation(.easeInOut(duration: 0.3), value: subscriptionManager.hasAccessToApp)
             .onChange(of: authStateObserver.user) { oldUser, newUser in
-                // Immediately update subscription status when user signs in
+                // Refresh subscription status when user signs in (background refresh)
                 if oldUser == nil && newUser != nil {
                     Task {
-                        await subscriptionManager.updateSubscriptionStatus()
+                        await subscriptionManager.refreshSubscriptionStatus()
                     }
                 }
             }
