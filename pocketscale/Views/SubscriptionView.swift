@@ -42,43 +42,43 @@ struct SubscriptionView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         // MARK: - Header Section
-                        VStack(spacing: 16) {
+                        VStack(spacing: 12) {
                             Image(systemName: "scale.3d")
                                 .font(.system(size: 40, weight: .light)) // Adjusted weight for consistency
                                 .foregroundColor(.accentColor)
                                 .shadow(color: .accentColor.opacity(0.3), radius: 10, y: 5)
                             
-                            Text("Try PocketScale")
+                            Text("Try PocketScale!")
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
                             
-                            Text("🎯 AI-powered mobile food scale")
+                            Text("The camera-based food scale in your pocket.")
                                 .font(.system(size: 17, weight: .medium, design: .rounded))
                                 .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
                         }
                         .padding(.top, 30)
                         .padding(.bottom, 30)
+                        .padding(.horizontal, 24)
                         .opacity(isAnimating ? 1 : 0)
                         .offset(y: isAnimating ? 0 : -30)
                         
                         // MARK: - Core Features Section
                         VStack(spacing: 16) {
                             FeatureRow(
-                                icon: "📱",
-                                title: "Camera-Based Weighing",
-                                description: "No physical scale needed—just point and weigh"
+                                icon: "🍅",
+                                title: "Always With You",
+                                description: "Your portable food scale that fits in your pocket."
                             )
-                            
+                            FeatureRow(
+                                icon: "📷",
+                                title: "Camera-Based Weighing",
+                                description: "No physical scale needed—just point and weigh."
+                            )
                             FeatureRow(
                                 icon: "🧠",
                                 title: "AI-Powered Accuracy",
-                                description: "Advanced computer vision for precise measurements"
-                            )
-                            
-                            FeatureRow(
-                                icon: "✨",
-                                title: "Always With You",
-                                description: "Your portable scale that fits in your pocket"
+                                description: "Advanced computer vision for precise measurements."
                             )
                         }
                         .padding(.horizontal, 24)

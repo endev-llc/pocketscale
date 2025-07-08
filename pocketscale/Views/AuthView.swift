@@ -42,11 +42,11 @@ struct AuthView: View {
                                     .foregroundColor(.accentColor)
                                     .shadow(color: .accentColor.opacity(0.3), radius: 10, y: 5)
 
-                                Text("Welcome to PocketScale")
+                                Text("Welcome to PocketScale!")
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
                                     .multilineTextAlignment(.center)
 
-                                Text("The AI-powered food scale in your pocket.")
+                                Text("The camera-based food scale in your pocket.")
                                     .font(.system(size: 17, weight: .regular, design: .rounded))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
@@ -60,19 +60,19 @@ struct AuthView: View {
                             // MARK: - Features Section
                             VStack(alignment: .leading, spacing: 20) {
                                 FeatureRow(
-                                    icon: "📱",
+                                    icon: "🍅",
+                                    title: "Always With You",
+                                    description: "Your portable food scale that fits in your pocket."
+                                )
+                                FeatureRow(
+                                    icon: "📷",
                                     title: "Camera-Based Weighing",
-                                    description: "No physical scale needed—just point and weigh"
+                                    description: "No physical scale needed—just point and weigh."
                                 )
                                 FeatureRow(
                                     icon: "🧠",
                                     title: "AI-Powered Accuracy",
-                                    description: "Advanced computer vision for precise measurements"
-                                )
-                                FeatureRow(
-                                    icon: "✨",
-                                    title: "Always With You",
-                                    description: "Your portable scale that fits in your pocket"
+                                    description: "Advanced computer vision for precise measurements."
                                 )
                             }
                             .padding(.horizontal, 24)
