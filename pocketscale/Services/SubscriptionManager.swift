@@ -189,10 +189,15 @@ class SubscriptionManager: ObservableObject {
         guard let user = Auth.auth().currentUser else { return }
         
         do {
-            try await Firestore.firestore().collection("users").document(user.uid).updateData([
+            // Use setData with merge to create document if it doesn't exist, or update if it does
+            try await Firestore.firestore().collection("users").document(user.uid).setData([
+                "uid": user.uid,
+                "email": user.email ?? "",
+                "name": user.displayName ?? "",
+                "isAppleUser": true,
                 "subscriptionStatus": status.rawValue,
                 "lastSubscriptionUpdate": Timestamp(date: Date())
-            ])
+            ], merge: true)
             print("Updated Firebase subscription status to: \(status.rawValue)")
         } catch {
             print("Error updating subscription status in Firebase: \(error)")
