@@ -128,7 +128,7 @@ struct SubscriptionView: View {
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                             .scaleEffect(0.9)
                                     } else {
-                                        Text("Start Free Trial")
+                                        Text("Start Free Trial!")
                                             .font(.system(size: 20, weight: .bold))
                                     }
                                 }

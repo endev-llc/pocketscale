@@ -11,19 +11,21 @@ import FirebaseAuth
 
 struct MainView: View {
     @StateObject private var geminiService = GeminiService()
+    @StateObject private var cameraManager = PersistentCameraManager.shared
+    
     @State private var isWeighing = false
     @State private var showWeight = false
-    @State private var currentWeight = 0.0
     @State private var capturedImage: UIImage?
     @State private var showingImagePicker = false
-    @State private var showingCamera = false
     @State private var analysisResult: WeightAnalysisResponse?
     @State private var errorMessage: String?
     @State private var showingError = false
-    @State private var showingActionSheet = false
-    
-    // New state to control the settings menu popover
     @State private var showingSettings = false
+    @State private var shouldAnalyzeAfterCapture = false
+    
+    // Focus animation states
+    @State private var focusPoint: CGPoint = .zero
+    @State private var showingFocusIndicator = false
 
     var body: some View {
         ZStack {
@@ -52,7 +54,6 @@ struct MainView: View {
 
                     Spacer()
 
-                    // Updated button to toggle the settings menu
                     Button(action: {
                         showingSettings.toggle()
                     }) {
@@ -60,7 +61,6 @@ struct MainView: View {
                             .font(.system(size: 20, weight: .ultraLight))
                             .foregroundColor(.secondary)
                     }
-                    // Popover menu for settings
                     .popover(isPresented: $showingSettings) {
                         settingsMenu
                             .presentationCompactAdaptation(.popover)
@@ -72,51 +72,40 @@ struct MainView: View {
 
                 // Instructional text (only when not weighing and not showing results)
                 if !isWeighing && !showWeight {
-                    Text(capturedImage == nil ? "Take a photo to weigh food" : "Image ready for analysis")
+                    Text(capturedImage == nil ? "Tap to focus • Capture to weigh food" : "Image ready for analysis")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.primary)
                         .padding(.bottom, 24)
                 }
 
-                // Digital scale platform area
+                // Camera view with overlay for captured image
                 ZStack {
-                    // Scale platform background with subtle scale-like styling
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color(.systemBackground))
-                        .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
-                        .shadow(color: .black.opacity(0.05), radius: 40, x: 0, y: 20)
-                        .frame(width: 320, height: 320)
-
-                    // Image display area
-                    Group {
-                        if let image = capturedImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 320, height: 320)
-                                .clipShape(RoundedRectangle(cornerRadius: 24))
-                                .scaleEffect(isWeighing ? 1.05 : 1.0)
-                                .animation(.easeInOut(duration: 0.5), value: isWeighing)
-                        } else {
-                            // Placeholder when no image
-                            VStack(spacing: 16) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 40, weight: .light))
-                                    .foregroundColor(.secondary)
-                                Text("Tap to add photo")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.secondary)
-                            }
+                    // Continuous camera preview (never stops)
+                    SmoothCameraPreview(
+                        onImageCaptured: handleImageCaptured,
+                        onTap: handleCameraTap
+                    )
+                    .frame(width: 320, height: 320)
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    
+                    // Captured image overlay (shows on top of camera when image exists)
+                    // Uses identical positioning and scaling to completely cover camera
+                    if let image = capturedImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                             .frame(width: 320, height: 320)
-                        }
-                    }
-                    .onTapGesture {
-                        if !isWeighing {
-                            showingActionSheet = true
-                        }
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
+                            .onTapGesture {
+                                // Allow dismissing captured image to go back to live camera
+                                if !isWeighing && !showWeight {
+                                    capturedImage = nil
+                                    shouldAnalyzeAfterCapture = false
+                                }
+                            }
                     }
 
-                    // Scale platform border with subtle gradient
+                    // Scale platform border
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(
                             LinearGradient(
@@ -128,8 +117,8 @@ struct MainView: View {
                         )
                         .frame(width: 320, height: 320)
 
-                    // Scale weighing surface pattern (more scale-like) - only show when there's an image
-                    if capturedImage != nil {
+                    // Scale weighing surface pattern (only show when there's an image and we're weighing)
+                    if capturedImage != nil && isWeighing {
                         ZStack {
                             // Concentric circles for scale-like appearance
                             ForEach([60, 120, 180, 240], id: \.self) { diameter in
@@ -141,21 +130,20 @@ struct MainView: View {
                             // Radial measurement marks
                             ForEach(0..<8, id: \.self) { index in
                                 Rectangle()
-                                    .fill(Color.white.opacity(isWeighing ? 0.6 : 0.3))
+                                    .fill(Color.white.opacity(0.6))
                                     .frame(width: 1, height: 12)
                                     .offset(y: -100)
                                     .rotationEffect(.degrees(Double(index) * 45))
                                     .animation(.easeInOut(duration: 0.6).delay(Double(index) * 0.1), value: isWeighing)
                             }
 
-                            // Center measurement grid (refined)
+                            // Center measurement grid
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: 5), spacing: 20) {
                                 ForEach(0..<25, id: \.self) { index in
                                     Circle()
                                         .fill(Color.white)
-                                        .frame(width: isWeighing ? 2.5 : 1.5, height: isWeighing ? 2.5 : 1.5)
-                                        .opacity(isWeighing ? 0.8 : 0.4)
-                                        .scaleEffect(isWeighing ? 1.0 : 0.8)
+                                        .frame(width: 2.5, height: 2.5)
+                                        .opacity(0.8)
                                         .animation(
                                             .easeInOut(duration: 0.6)
                                             .delay(Double(index) * 0.03),
@@ -193,6 +181,15 @@ struct MainView: View {
                             }
                         }
                     }
+                    
+                    // Focus indicator (only show on live camera, not on captured image)
+                    // By using .opacity() instead of an if statement, we prevent the view from being
+                    // added/removed from the hierarchy, which stops the layout from shifting.
+                    FocusIndicator()
+                        .position(focusPoint)
+                        .opacity(showingFocusIndicator && capturedImage == nil ? 1.0 : 0.0)
+                        .animation(.easeInOut(duration: 0.2), value: showingFocusIndicator)
+
                 }
                 .padding(.bottom, 32)
 
@@ -223,7 +220,7 @@ struct MainView: View {
                             Spacer()
                         }
 
-                        // Primary weight display - improved readability
+                        // Primary weight display
                         HStack(alignment: .bottom, spacing: 8) {
                             Text("\(String(format: "%.1f", Double(result.total_weight_grams) * 0.035274))")
                                 .font(.system(size: 58, weight: .light, design: .rounded))
@@ -317,73 +314,75 @@ struct MainView: View {
 
                 Spacer()
 
-                // Elegant buttons (when not showing results)
+                // Action buttons
                 if !showWeight {
                     VStack(spacing: 12) {
-                        // Take Photo / Analyze button
-                        if capturedImage == nil {
-                            Button(action: { showingActionSheet = true }) {
-                                HStack(spacing: 12) {
+                        // Capture & Analyze button
+                        Button(action: captureAndAnalyze) {
+                            HStack(spacing: 12) {
+                                if isWeighing && shouldAnalyzeAfterCapture {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                    Text("Analyzing...")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.white)
+                                } else {
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 20, weight: .medium))
                                         .foregroundColor(.white)
-                                    Text("Take Photo")
+                                    Text("Capture & Analyze")
                                         .font(.system(size: 18, weight: .semibold))
                                         .foregroundColor(.white)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color.green, Color.green.opacity(0.8)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .cornerRadius(16)
-                                .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
                             }
-                        } else {
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                            .scaleEffect(isWeighing ? 0.98 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: isWeighing)
+                        }
+                        .disabled(isWeighing)
+                        
+                        // Upload & Analyze button
+                        Button(action: uploadAndAnalyze) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "photo")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(.white)
+                                Text("Upload & Analyze")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.green, Color.green.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
+                        }
+                        .disabled(isWeighing)
+                        
+                        // Manual analyze button (only shown if image exists but not analyzing)
+                        if capturedImage != nil && !isWeighing && !shouldAnalyzeAfterCapture {
                             Button(action: startMeasurement) {
-                                HStack(spacing: 12) {
-                                    if isWeighing {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .scaleEffect(0.8)
-                                        Text("Analyzing...")
-                                            .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    } else {
-                                        Image(systemName: "scale.3d")
-                                            .font(.system(size: 20, weight: .medium))
-                                            .foregroundColor(.white)
-                                        Text("Analyze Weight")
-                                            .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.blue.opacity(0.8)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .cornerRadius(16)
-                                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
-                                .scaleEffect(isWeighing ? 0.98 : 1.0)
-                                .animation(.easeInOut(duration: 0.2), value: isWeighing)
-                            }
-                            .disabled(isWeighing)
-                            
-                            // Retake photo button
-                            Button(action: { showingActionSheet = true }) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "camera.rotate")
+                                    Image(systemName: "scale.3d")
                                         .font(.system(size: 16, weight: .medium))
-                                    Text("Retake Photo")
+                                    Text("Analyze Current Image")
                                         .font(.system(size: 16, weight: .medium))
                                 }
                                 .foregroundColor(.secondary)
@@ -392,7 +391,23 @@ struct MainView: View {
                                 .background(Color(.tertiarySystemBackground))
                                 .cornerRadius(12)
                             }
-                            .disabled(isWeighing)
+                        }
+                        
+                        // Clear image button (when image exists)
+                        if capturedImage != nil && !isWeighing {
+                            Button(action: clearImage) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "xmark.circle")
+                                        .font(.system(size: 16, weight: .medium))
+                                    Text("Clear Image")
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                                .background(Color(.tertiarySystemBackground))
+                                .cornerRadius(12)
+                            }
                         }
                     }
                     .padding(.horizontal, 24)
@@ -400,41 +415,30 @@ struct MainView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingCamera) {
-            CameraView(image: $capturedImage, isPresented: $showingCamera)
-        }
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $capturedImage, isPresented: $showingImagePicker, sourceType: .photoLibrary)
-        }
-        .actionSheet(isPresented: $showingActionSheet) {
-            ActionSheet(
-                title: Text("Select Photo"),
-                buttons: [
-                    .default(Text("Camera")) {
-                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                            showingCamera = true
-                        }
-                    },
-                    .default(Text("Photo Library")) {
-                        showingImagePicker = true
-                    },
-                    .cancel()
-                ]
-            )
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
+        .onChange(of: capturedImage) { oldValue, newValue in
+            // Automatically start analysis when a new image is captured and shouldAnalyzeAfterCapture is true
+            if newValue != nil && shouldAnalyzeAfterCapture && oldValue != newValue {
+                shouldAnalyzeAfterCapture = false
+                startMeasurement()
+            }
+        }
     }
     
-    // Extracted settings menu view
+    // MARK: - Helper Views
+    
     private var settingsMenu: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: {
                 signOut()
-                showingSettings = false // Dismiss the popover
+                showingSettings = false
             }) {
                 HStack {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -443,6 +447,44 @@ struct MainView: View {
                 .foregroundColor(.red)
                 .padding()
             }
+        }
+    }
+    
+    // MARK: - Action Methods
+    
+    private func handleImageCaptured(_ image: UIImage) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            capturedImage = image
+        }
+    }
+    
+    private func handleCameraTap(_ point: CGPoint) {
+        // Only allow focus when live camera is visible (no captured image)
+        guard capturedImage == nil else { return }
+        
+        focusPoint = point
+        showingFocusIndicator = true
+        
+        // Hide focus indicator after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            showingFocusIndicator = false
+        }
+    }
+    
+    private func captureAndAnalyze() {
+        shouldAnalyzeAfterCapture = true
+        cameraManager.capturePhoto()
+    }
+    
+    private func uploadAndAnalyze() {
+        shouldAnalyzeAfterCapture = true
+        showingImagePicker = true
+    }
+    
+    private func clearImage() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            capturedImage = nil
+            shouldAnalyzeAfterCapture = false
         }
     }
     
@@ -460,8 +502,9 @@ struct MainView: View {
         withAnimation(.spring()) {
             showWeight = false
             isWeighing = false
-            capturedImage = nil
             analysisResult = nil
+            shouldAnalyzeAfterCapture = false
+            capturedImage = nil
         }
     }
 
@@ -495,11 +538,9 @@ struct MainView: View {
         }
     }
     
-    // New function to handle signing out
     private func signOut() {
         do {
             try Auth.auth().signOut()
-            // Refresh subscription state when signing out (will clear cache automatically)
             Task {
                 await SubscriptionManager.shared.refreshSubscriptionStatus()
             }
@@ -508,6 +549,16 @@ struct MainView: View {
             self.showingError = true
             print("Error signing out: %@", signOutError)
         }
+    }
+}
+
+// MARK: - Focus Indicator View
+struct FocusIndicator: View {
+    var body: some View {
+        Circle()
+            .stroke(Color.yellow, lineWidth: 2)
+            .frame(width: 60, height: 60)
+            .opacity(0.8)
     }
 }
 
