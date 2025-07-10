@@ -454,8 +454,14 @@ struct MainView: View {
     // MARK: - Action Methods
     
     private func handleImageCaptured(_ image: UIImage) {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            capturedImage = image
+        // Show image immediately when user tapped "Capture & Analyze"
+        if shouldAnalyzeAfterCapture {
+            capturedImage = image  // No animation for immediate display
+        } else {
+            // Keep animation for other cases (like manual capture)
+            withAnimation(.easeInOut(duration: 0.3)) {
+                capturedImage = image
+            }
         }
     }
     

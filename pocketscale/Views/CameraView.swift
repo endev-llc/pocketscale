@@ -266,12 +266,16 @@ extension PersistentCameraManager: AVCapturePhotoCaptureDelegate {
             return
         }
         
-        // Optimize the captured image
-        let optimizedImage = optimizeImage(capturedImage)
-        
+        // Send the raw image immediately, optimize in background
         DispatchQueue.main.async { [weak self] in
-            self?.onImageCaptured?(optimizedImage)
-            print("✅ Photo captured and processed successfully")
+            self?.onImageCaptured?(capturedImage)
+            print("✅ Photo captured and sent immediately")
+        }
+        
+        // Optimize image in background (for future use if needed)
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let optimizedImage = self?.optimizeImage(capturedImage) ?? capturedImage
+            // Could store optimized version for later use if needed
         }
     }
     
