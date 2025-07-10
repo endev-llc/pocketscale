@@ -92,14 +92,6 @@ struct MainView: View {
                 .padding(.bottom, 40)
                 .zIndex(999) // Ensure header is always on top and interactive
 
-                // Instructional text (only when not weighing and not showing results)
-                if !isWeighing && !showWeight {
-                    Text(capturedImage == nil ? "Tap to focus • Capture to weigh food" : "Image ready for analysis")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                        .padding(.bottom, 24)
-                }
-
                 // Camera view with overlay for captured image
                 ZStack {
                     // Continuous camera preview (never stops)
@@ -123,7 +115,7 @@ struct MainView: View {
                     
                     // Captured image overlay (shows on top of camera when image exists)
                     // Uses identical positioning and scaling to completely cover camera
-                    if let image = capturedImage, !isWeighing {
+                    if let image = capturedImage {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -149,44 +141,6 @@ struct MainView: View {
                             lineWidth: 0.5
                         )
                         .frame(width: 320, height: 320)
-
-                    // Scale weighing surface pattern (only show when there's an image and we're weighing)
-                    if capturedImage != nil && isWeighing {
-                        ZStack {
-                            // Concentric circles for scale-like appearance
-                            ForEach([60, 120, 180, 240], id: \.self) { diameter in
-                                Circle()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
-                                    .frame(width: CGFloat(diameter), height: CGFloat(diameter))
-                            }
-
-                            // Radial measurement marks
-                            ForEach(0..<8, id: \.self) { index in
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.6))
-                                    .frame(width: 1, height: 12)
-                                    .offset(y: -100)
-                                    .rotationEffect(.degrees(Double(index) * 45))
-                                    .animation(.easeInOut(duration: 0.6).delay(Double(index) * 0.1), value: isWeighing)
-                            }
-
-                            // Center measurement grid
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 20), count: 5), spacing: 20) {
-                                ForEach(0..<25, id: \.self) { index in
-                                    Circle()
-                                        .fill(Color.white)
-                                        .frame(width: 2.5, height: 2.5)
-                                        .opacity(0.8)
-                                        .animation(
-                                            .easeInOut(duration: 0.6)
-                                            .delay(Double(index) * 0.03),
-                                            value: isWeighing
-                                        )
-                                }
-                            }
-                            .frame(width: 140, height: 140)
-                        }
-                    }
 
                     // Status display during weighing
                     if isWeighing {
@@ -216,19 +170,6 @@ struct MainView: View {
                     }
                 }
                 .padding(.bottom, 32)
-
-                // Accuracy indicator (only when not weighing and not showing results)
-                if !isWeighing && !showWeight && capturedImage != nil {
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .foregroundColor(.green)
-                            .font(.system(size: 16))
-                        Text("AI-Powered Analysis")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.bottom, 24)
-                }
 
                 // Weight results panel
                 if showWeight, let result = analysisResult {
