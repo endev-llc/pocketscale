@@ -357,23 +357,6 @@ struct MainView: View {
                                 .cornerRadius(12)
                             }
                         }
-                        
-                        // Clear image button (when image exists)
-                        if capturedImage != nil && !isWeighing {
-                            Button(action: clearImage) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "xmark.circle")
-                                        .font(.system(size: 16, weight: .medium))
-                                    Text("Clear Image")
-                                        .font(.system(size: 16, weight: .medium))
-                                }
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                                .background(Color(.tertiarySystemBackground))
-                                .cornerRadius(12)
-                            }
-                        }
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 50)
