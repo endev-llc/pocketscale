@@ -187,6 +187,7 @@ struct MainView: View {
                     // added/removed from the hierarchy, which stops the layout from shifting.
                     FocusIndicator()
                         .position(focusPoint)
+                        .animation(nil, value: focusPoint) // Disable animation for position changes
                         .opacity(showingFocusIndicator && capturedImage == nil ? 1.0 : 0.0)
                         .animation(.easeInOut(duration: 0.2), value: showingFocusIndicator)
 
