@@ -20,6 +20,7 @@ class PersistentCameraManager: NSObject, ObservableObject {
     
     @Published var isSessionRunning = false
     @Published var authorizationStatus: AVAuthorizationStatus = .notDetermined
+    @Published var isFlashEnabled = false
     
     // Callbacks for image capture
     var onImageCaptured: ((UIImage) -> Void)?
@@ -248,6 +249,26 @@ class PersistentCameraManager: NSObject, ObservableObject {
             device.unlockForConfiguration()
         } catch {
             print("❌ Failed to set focus: \(error)")
+        }
+    }
+    
+    func toggleFlash() {
+        guard let device = currentDevice, device.hasTorch else { return }
+        
+        do {
+            try device.lockForConfiguration()
+            
+            if device.torchMode == .on {
+                device.torchMode = .off
+                isFlashEnabled = false
+            } else {
+                try device.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
+                isFlashEnabled = true
+            }
+            
+            device.unlockForConfiguration()
+        } catch {
+            print("❌ Failed to toggle flash: \(error)")
         }
     }
 }

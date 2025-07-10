@@ -41,7 +41,7 @@ struct MainView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Minimal header
+                // Minimal header - FIXED: Ensure buttons are always interactive
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("PocketScale")
@@ -54,13 +54,34 @@ struct MainView: View {
 
                     Spacer()
 
+                    // Flash button - Always enabled and interactive
+                    Button(action: {
+                        cameraManager.toggleFlash()
+                    }) {
+                        Image(systemName: cameraManager.isFlashEnabled ? "bolt.fill" : "bolt.slash.fill")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(cameraManager.isFlashEnabled ? .yellow : .primary)
+                            .frame(width: 44, height: 44)
+                            .background(Color(.tertiarySystemBackground))
+                            .clipShape(Circle())
+                    }
+                    .disabled(false) // Explicitly ensure it's never disabled
+                    .buttonStyle(PlainButtonStyle()) // Prevent any default button styling issues
+                    .padding(.trailing, 8)
+
+                    // Settings button - Always enabled and interactive
                     Button(action: {
                         showingSettings.toggle()
                     }) {
                         Image(systemName: "gearshape")
-                            .font(.system(size: 20, weight: .ultraLight))
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.primary)
+                            .frame(width: 44, height: 44)
+                            .background(Color(.tertiarySystemBackground))
+                            .clipShape(Circle())
                     }
+                    .disabled(false) // Explicitly ensure it's never disabled
+                    .buttonStyle(PlainButtonStyle()) // Prevent any default button styling issues
                     .popover(isPresented: $showingSettings) {
                         settingsMenu
                             .presentationCompactAdaptation(.popover)
@@ -69,6 +90,7 @@ struct MainView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
                 .padding(.bottom, 40)
+                .zIndex(999) // Ensure header is always on top and interactive
 
                 // Instructional text (only when not weighing and not showing results)
                 if !isWeighing && !showWeight {
@@ -87,10 +109,21 @@ struct MainView: View {
                     )
                     .frame(width: 320, height: 320)
                     .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        // Focus indicator is now an overlay on the camera preview
+                        // to ensure correct positioning.
+                        Group {
+                            if showingFocusIndicator {
+                                FocusIndicator()
+                                    .position(focusPoint)
+                                    .transition(.opacity.animation(.easeInOut(duration: 0.2)))
+                            }
+                        }
+                    )
                     
                     // Captured image overlay (shows on top of camera when image exists)
                     // Uses identical positioning and scaling to completely cover camera
-                    if let image = capturedImage {
+                    if let image = capturedImage, !isWeighing {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -181,16 +214,6 @@ struct MainView: View {
                             }
                         }
                     }
-                    
-                    // Focus indicator (only show on live camera, not on captured image)
-                    // By using .opacity() instead of an if statement, we prevent the view from being
-                    // added/removed from the hierarchy, which stops the layout from shifting.
-                    FocusIndicator()
-                        .position(focusPoint)
-                        .animation(nil, value: focusPoint) // Disable animation for position changes
-                        .opacity(showingFocusIndicator && capturedImage == nil ? 1.0 : 0.0)
-                        .animation(.easeInOut(duration: 0.2), value: showingFocusIndicator)
-
                 }
                 .padding(.bottom, 32)
 
@@ -470,11 +493,16 @@ struct MainView: View {
         guard capturedImage == nil else { return }
         
         focusPoint = point
-        showingFocusIndicator = true
         
-        // Hide focus indicator after a delay
+        // Show the focus indicator and then hide it after a delay
+        withAnimation {
+            showingFocusIndicator = true
+        }
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            showingFocusIndicator = false
+            withAnimation {
+                showingFocusIndicator = false
+            }
         }
     }
     
