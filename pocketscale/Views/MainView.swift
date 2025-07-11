@@ -144,12 +144,29 @@ struct MainView: View {
         }
     }
 
+    // MODIFIED: This view has been refactored to fix the layout bug.
     private var cameraView: some View {
         ZStack {
             SmoothCameraPreview(
                 onImageCaptured: handleImageCaptured,
                 onTap: handleCameraTap
             )
+            // FIXED: By placing the image in an overlay, it is constrained
+            // to the bounds of the SmoothCameraPreview, preventing it from
+            // expanding the layout horizontally.
+            .overlay {
+                if let image = capturedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .onTapGesture {
+                            if !isWeighing && !showWeight {
+                                capturedImage = nil
+                                shouldAnalyzeAfterCapture = false
+                            }
+                        }
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
             .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
             .overlay(
@@ -161,22 +178,6 @@ struct MainView: View {
                     }
                 }
             )
-            
-            if let image = capturedImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    // Reduced frame height of the image overlay.
-                    .frame(height: 330)
-                    .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-                    .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
-                    .onTapGesture {
-                        if !isWeighing && !showWeight {
-                            capturedImage = nil
-                            shouldAnalyzeAfterCapture = false
-                        }
-                    }
-            }
             
             if isWeighing {
                 ZStack {
@@ -192,7 +193,6 @@ struct MainView: View {
                 .transition(.opacity)
             }
         }
-        // Reduced frame height of the entire camera view container.
         .frame(height: 330)
     }
 
@@ -261,7 +261,6 @@ struct MainView: View {
                 }
 
                 HStack(spacing: 12) {
-                    // MODIFIED: This is now the Share button
                     Button(action: {
                         isShowingShareSheet = true
                     }) {
