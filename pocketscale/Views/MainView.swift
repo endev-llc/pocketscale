@@ -318,6 +318,8 @@ struct MainView: View {
             Spacer()
             
             Button(action: {
+                // Turn flash off when opening photo library
+                cameraManager.turnFlashOff()
                 shouldAnalyzeAfterCapture = true
                 showingImagePicker = true
             }) {
@@ -353,6 +355,8 @@ struct MainView: View {
     // MARK: - Methods
 
     private func handleImageCaptured(_ image: UIImage) {
+        // Turn flash off after image is captured
+        cameraManager.turnFlashOff()
         if shouldAnalyzeAfterCapture {
             capturedImage = image
         } else {

@@ -271,6 +271,23 @@ class PersistentCameraManager: NSObject, ObservableObject {
             print("❌ Failed to toggle flash: \(error)")
         }
     }
+    
+    // New function to explicitly turn the flash off
+    func turnFlashOff() {
+        guard let device = currentDevice, device.hasTorch, device.torchMode == .on else { return }
+        
+        do {
+            try device.lockForConfiguration()
+            device.torchMode = .off
+            device.unlockForConfiguration()
+            
+            DispatchQueue.main.async {
+                self.isFlashEnabled = false
+            }
+        } catch {
+            print("❌ Failed to turn off flash: \(error)")
+        }
+    }
 }
 
 // MARK: - Photo Capture Delegate
