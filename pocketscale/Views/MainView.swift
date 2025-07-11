@@ -278,8 +278,8 @@ struct MainView: View {
                     }
 
                     Button(action: resetView) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 18, weight: .medium))
+                        Image(systemName: "xmark.circle")
+                            .font(.system(size: 23, weight: .medium))
                             .foregroundColor(.blue)
                             .frame(width: 50, height: 50)
                             .background(Color(.tertiarySystemBackground))
