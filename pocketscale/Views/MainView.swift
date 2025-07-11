@@ -24,7 +24,9 @@ struct MainView: View {
     @State private var showingSettings = false
     @State private var shouldAnalyzeAfterCapture = false
     @State private var isShowingShareSheet = false // State for the share sheet
-    
+    @State private var showingFeedbackSheet = false // State for the feedback sheet
+
+
     // Animation States
     @State private var focusPoint: CGPoint = .zero
     @State private var showingFocusIndicator = false
@@ -94,6 +96,9 @@ struct MainView: View {
                 let shareText = "I just weighed \(result.overall_food_item) with PocketScale! It's \(String(format: "%.1f", Double(result.total_weight_grams) * 0.035274)) oz (\(result.total_weight_grams)g)."
                 ShareSheet(activityItems: [image, shareText])
             }
+        }
+        .sheet(isPresented: $showingFeedbackSheet) {
+            FeedbackView(isPresented: $showingFeedbackSheet)
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
@@ -348,6 +353,17 @@ struct MainView: View {
     
     private var settingsMenu: some View {
         VStack(alignment: .leading, spacing: 0) {
+            Button(action: {
+                showingSettings = false
+                showingFeedbackSheet = true
+            }) {
+                HStack {
+                    Image(systemName: "envelope")
+                    Text("Send Us Feedback")
+                }
+                .padding()
+            }
+            Divider()
             Button(action: {
                 signOut()
                 showingSettings = false
