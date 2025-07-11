@@ -23,6 +23,7 @@ struct MainView: View {
     @State private var showingError = false
     @State private var showingSettings = false
     @State private var shouldAnalyzeAfterCapture = false
+    @State private var isShowingShareSheet = false // State for the share sheet
     
     // Animation States
     @State private var focusPoint: CGPoint = .zero
@@ -86,6 +87,13 @@ struct MainView: View {
         }
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $capturedImage, isPresented: $showingImagePicker, sourceType: .photoLibrary)
+        }
+        .sheet(isPresented: $isShowingShareSheet) {
+            // Construct the items to share
+            if let result = analysisResult, let image = capturedImage {
+                let shareText = "I just weighed \(result.overall_food_item) with PocketScale! It's \(String(format: "%.1f", Double(result.total_weight_grams) * 0.035274)) oz (\(result.total_weight_grams)g)."
+                ShareSheet(activityItems: [image, shareText])
+            }
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
@@ -253,11 +261,14 @@ struct MainView: View {
                 }
 
                 HStack(spacing: 12) {
-                    Button(action: {}) {
+                    // MODIFIED: This is now the Share button
+                    Button(action: {
+                        isShowingShareSheet = true
+                    }) {
                         HStack(spacing: 8) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 16))
-                            Text("Save Weight")
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .medium))
+                            Text("Share")
                                 .font(.system(size: 16, weight: .medium))
                         }
                         .foregroundColor(.white)
@@ -437,6 +448,19 @@ struct FocusIndicator: View {
             .frame(width: 70, height: 70)
             .opacity(0.8)
     }
+}
+
+// MARK: - Share Sheet Helper
+struct ShareSheet: UIViewControllerRepresentable {
+    var activityItems: [Any]
+    var applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Preview
