@@ -14,6 +14,10 @@ struct AuthView: View {
     
     // State for entry animation
     @State private var isAnimating = false
+    
+    // State for sheet presentations
+    @State private var showingPrivacyPolicy = false
+    @State private var showingTermsOfService = false
 
     var body: some View {
         ZStack {
@@ -37,8 +41,8 @@ struct AuthView: View {
                         VStack(spacing: 0) {
                             // MARK: - Header Section
                             VStack(spacing: 16) {
-                                Image(systemName: "scale.3d")
-                                    .font(.system(size: 40, weight: .light))
+                                Image(systemName: "camera.viewfinder")
+                                    .font(.system(size: 80, weight: .light))
                                     .foregroundColor(.accentColor)
                                     .shadow(color: .accentColor.opacity(0.3), radius: 10, y: 5)
 
@@ -99,12 +103,18 @@ struct AuthView: View {
                                 .shadow(color: .black.opacity(0.15), radius: 10, y: 5)
 
                                 // Terms and Privacy Policy
-                                Text("By continuing, you agree to our **Terms of Service** and **Privacy Policy**.")
-                                    .font(.footnote)
-                                    .foregroundColor(.secondary)
+                                Text(makeAttributedString())
+                                    .font(.footnote) // Sets the base font for the whole string
                                     .multilineTextAlignment(.center)
-                                    // Note: For actual links, you would wrap this in a view that can handle URLs.
-                                    // For simplicity, we are using Markdown-style text here.
+                                    .environment(\.openURL, OpenURLAction { url in
+                                        // Handle the link taps to show your sheets
+                                        if url.absoluteString == "show-terms" {
+                                            showingTermsOfService = true
+                                        } else if url.absoluteString == "show-privacy" {
+                                            showingPrivacyPolicy = true
+                                        }
+                                        return .handled // Indicates we've handled the URL
+                                    })
                                 
                                 // Error Message Display
                                 if let errorMessage = viewModel.errorMessage {
@@ -136,6 +146,47 @@ struct AuthView: View {
                 isAnimating = true
             }
         }
+        .sheet(isPresented: $showingPrivacyPolicy) {
+            PrivacyPolicyView(isPresented: $showingPrivacyPolicy)
+        }
+        .sheet(isPresented: $showingTermsOfService) {
+            TermsOfServiceView(isPresented: $showingTermsOfService)
+        }
+    }
+    
+    /// Creates the styled string with embedded links for legal text.
+    private func makeAttributedString() -> AttributedString {
+        var string = AttributedString("By continuing, you agree to our ")
+        
+        // Create the "Terms of Service" link
+        var termsLink = AttributedString("Terms of Service")
+        termsLink.link = URL(string: "show-terms")
+        termsLink.font = .footnote.weight(.medium)
+        // .link automatically uses the accent color
+        
+        // Create the "Privacy Policy" link
+        var privacyLink = AttributedString("Privacy Policy")
+        privacyLink.link = URL(string: "show-privacy")
+        privacyLink.font = .footnote.weight(.medium)
+        
+        // Combine all the parts
+        string.append(termsLink)
+        string.append(AttributedString(" and "))
+        string.append(privacyLink)
+        string.append(AttributedString("."))
+        
+        // Apply the secondary color to the non-link parts
+        if let range = string.range(of: "By continuing, you agree to our ") {
+            string[range].foregroundColor = .secondary
+        }
+        if let range = string.range(of: " and ") {
+            string[range].foregroundColor = .secondary
+        }
+        if let range = string.range(of: ".") {
+            string[range].foregroundColor = .secondary
+        }
+        
+        return string
     }
 }
 

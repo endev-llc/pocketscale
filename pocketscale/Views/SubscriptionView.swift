@@ -43,7 +43,7 @@ struct SubscriptionView: View {
                     VStack(spacing: 0) {
                         // MARK: - Header Section
                         VStack(spacing: 12) {
-                            Image(systemName: "scale.3d")
+                            Image(systemName: "camera.viewfinder")
                                 .font(.system(size: 40, weight: .light)) // Adjusted weight for consistency
                                 .foregroundColor(.accentColor)
                                 .shadow(color: .accentColor.opacity(0.3), radius: 10, y: 5)
