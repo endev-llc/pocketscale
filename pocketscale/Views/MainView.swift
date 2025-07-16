@@ -150,6 +150,17 @@ struct MainView: View {
 
             Spacer()
             
+            // Scan History Button
+            Button(action: { showingScanHistory.toggle() }) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(Color(.systemBackground).opacity(0.5))
+                    .clipShape(Circle())
+            }
+
+            // Settings Button
             Button(action: { showingSettings.toggle() }) {
                 Image(systemName: "gearshape")
                     .font(.system(size: 20, weight: .medium))
@@ -368,17 +379,6 @@ struct MainView: View {
     
     private var settingsMenu: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button(action: {
-                showingSettings = false
-                showingScanHistory = true
-            }) {
-                HStack {
-                    Image(systemName: "clock.arrow.circlepath")
-                    Text("Scan History")
-                }
-                .padding()
-            }
-            Divider()
             Button(action: {
                 showingSettings = false
                 showingFeedbackSheet = true
