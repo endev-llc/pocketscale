@@ -9,7 +9,7 @@ import SwiftUI
 import AVFoundation
 import FirebaseAuth
 import FirebaseFirestore
-import FirebaseStorage // Import Firebase Storage
+import FirebaseStorage
 
 struct MainView: View {
     @StateObject private var geminiService = GeminiService()
@@ -459,9 +459,7 @@ struct MainView: View {
             do {
                 let result = try await geminiService.analyzeFood(image: image)
                 
-                // Save the result to Firebase
-                await saveScan(result: result, image: image)
-                
+                // Immediately update the UI on the main thread
                 await MainActor.run {
                     self.analysisResult = result
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -469,6 +467,12 @@ struct MainView: View {
                         self.showWeight = true
                     }
                 }
+                
+                // Start a new Task to save the scan in the background
+                Task {
+                    await saveScan(result: result, image: image)
+                }
+
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
@@ -480,55 +484,54 @@ struct MainView: View {
     }
 
     private func saveScan(result: WeightAnalysisResponse, image: UIImage) async {
-            guard let userId = Auth.auth().currentUser?.uid else { return }
+        guard let userId = Auth.auth().currentUser?.uid else { return }
 
-            // 1. Upload image to Firebase Storage
-            guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
-            let storageRef = Storage.storage().reference()
-            let imageId = UUID().uuidString
-            let imageRef = storageRef.child("scans/\(userId)/\(imageId).jpg")
+        // 1. Upload image to Firebase Storage
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+        let storageRef = Storage.storage().reference()
+        let imageId = UUID().uuidString
+        let imageRef = storageRef.child("scans/\(userId)/\(imageId).jpg")
 
-            do {
-                _ = try await imageRef.putDataAsync(imageData)
-                let downloadURL = try await imageRef.downloadURL()
+        do {
+            _ = try await imageRef.putDataAsync(imageData)
+            let downloadURL = try await imageRef.downloadURL()
 
-                // 2. Prepare scan data for Firestore
-                let scanData: [String: Any] = [
-                    "userId": userId,
-                    "timestamp": Timestamp(date: Date()),
-                    "imageUrl": downloadURL.absoluteString,
-                    "overall_food_item": result.overall_food_item,
-                    "constituent_food_items": result.constituent_food_items.map { ["name": $0.name, "weight_grams": $0.weight_grams] },
-                    "total_weight_grams": result.total_weight_grams,
-                    "confidence_percentage": result.confidence_percentage
-                ]
+            // 2. Prepare scan data for Firestore
+            let scanData: [String: Any] = [
+                "userId": userId,
+                "timestamp": Timestamp(date: Date()),
+                "imageUrl": downloadURL.absoluteString,
+                "overall_food_item": result.overall_food_item,
+                "constituent_food_items": result.constituent_food_items.map { ["name": $0.name, "weight_grams": $0.weight_grams] },
+                "total_weight_grams": result.total_weight_grams,
+                "confidence_percentage": result.confidence_percentage
+            ]
 
-                // 3. Save to Firestore using a batch write for atomicity
-                let db = Firestore.firestore()
-                let batch = db.batch()
+            // 3. Save to Firestore using a batch write for atomicity
+            let db = Firestore.firestore()
+            let batch = db.batch()
 
-                // Path for root `scans` collection
-                let rootScanRef = db.collection("scans").document()
-                
-                // Path for user's subcollection `userScans`
-                let userScanRef = db.collection("users").document(userId).collection("userScans").document(rootScanRef.documentID)
+            // Path for root `scans` collection
+            let rootScanRef = db.collection("scans").document()
+            
+            // Path for user's subcollection `userScans`
+            let userScanRef = db.collection("users").document(userId).collection("userScans").document(rootScanRef.documentID)
 
-                // CORRECTED: Use the 'forDocument' argument label
-                batch.setData(scanData, forDocument: rootScanRef)
-                batch.setData(scanData, forDocument: userScanRef)
+            batch.setData(scanData, forDocument: rootScanRef)
+            batch.setData(scanData, forDocument: userScanRef)
 
-                try await batch.commit()
-                print("✅ Scan saved successfully to both collections.")
+            try await batch.commit()
+            print("✅ Scan saved successfully to both collections.")
 
-            } catch {
-                print("❌ Failed to save scan: \(error.localizedDescription)")
-                // Optionally update UI to show this specific error
-                await MainActor.run {
-                    self.errorMessage = "Failed to save scan to history: \(error.localizedDescription)"
-                    self.showingError = true
-                }
+        } catch {
+            print("❌ Failed to save scan: \(error.localizedDescription)")
+            // Optionally update UI to show this specific error
+            await MainActor.run {
+                self.errorMessage = "Failed to save scan to history: \(error.localizedDescription)"
+                self.showingError = true
             }
         }
+    }
     
     private func confidenceColor(_ confidence: Int) -> Color {
         if confidence >= 80 { return .green }
