@@ -9,6 +9,23 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
+// MARK: - Simple Image Cache
+class ImageCache {
+    static let shared = ImageCache()
+    private var cache = NSCache<NSURL, UIImage>()
+
+    private init() {}
+
+    func get(forKey key: URL) -> UIImage? {
+        return cache.object(forKey: key as NSURL)
+    }
+
+    func set(forKey key: URL, image: UIImage) {
+        cache.setObject(image, forKey: key as NSURL)
+    }
+}
+
+
 // MARK: - Scan Data Model
 struct Scan: Codable, Identifiable, Equatable {
     @DocumentID var id: String?
@@ -144,7 +161,7 @@ struct ScanHistoryCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Asynchronously load the image from the URL
+            // Asynchronously load the image from the URL, now with caching
             AsyncImageView(url: URL(string: scan.imageUrl))
                 .aspectRatio(contentMode: .fill)
                 .frame(height: 200)
@@ -225,7 +242,7 @@ struct ScanHistoryCard: View {
     }
 }
 
-// MARK: - Asynchronous Image Loading View
+// MARK: - Asynchronous Image Loading View (with Caching)
 struct AsyncImageView: View {
     let url: URL?
     @State private var image: UIImage? = nil
@@ -250,9 +267,18 @@ struct AsyncImageView: View {
 
     private func loadImage() {
         guard let url = url, image == nil else { return }
+
+        // Check cache first
+        if let cachedImage = ImageCache.shared.get(forKey: url) {
+            self.image = cachedImage
+            return
+        }
+        
         isLoading = true
         URLSession.shared.dataTask(with: url) { data, _, _ in
             if let data = data, let loadedImage = UIImage(data: data) {
+                // Save to cache and update UI
+                ImageCache.shared.set(forKey: url, image: loadedImage)
                 DispatchQueue.main.async {
                     self.image = loadedImage
                     self.isLoading = false
