@@ -8,6 +8,7 @@
 import SwiftUI
 import AVFoundation
 import FirebaseAuth
+import FirebaseFirestore
 
 struct MainView: View {
     @StateObject private var geminiService = GeminiService()
@@ -25,6 +26,7 @@ struct MainView: View {
     @State private var shouldAnalyzeAfterCapture = false
     @State private var isShowingShareSheet = false // State for the share sheet
     @State private var showingFeedbackSheet = false // State for the feedback sheet
+    @State private var showingDeleteConfirmation = false // State for the delete account alert
 
 
     // Animation States
@@ -104,6 +106,14 @@ struct MainView: View {
             Button("OK") { }
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
+        }
+        .alert("Delete Account", isPresented: $showingDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                deleteAccount()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete your account? This action cannot be undone.")
         }
         .onChange(of: capturedImage) { oldValue, newValue in
             if newValue != nil && shouldAnalyzeAfterCapture && oldValue != newValue {
@@ -375,6 +385,18 @@ struct MainView: View {
                 .foregroundColor(.red)
                 .padding()
             }
+            Divider()
+            Button(action: {
+                showingSettings = false
+                showingDeleteConfirmation = true
+            }) {
+                HStack {
+                    Image(systemName: "trash")
+                    Text("Delete Account")
+                }
+                .foregroundColor(.red)
+                .padding()
+            }
         }
     }
 
@@ -450,6 +472,38 @@ struct MainView: View {
         } catch let signOutError as NSError {
             self.errorMessage = "Error signing out: \(signOutError.localizedDescription)"
             self.showingError = true
+        }
+    }
+    
+    private func deleteAccount() {
+        guard let user = Auth.auth().currentUser else {
+            self.errorMessage = "You must be signed in to delete your account."
+            self.showingError = true
+            return
+        }
+
+        let db = Firestore.firestore()
+        let userDocRef = db.collection("users").document(user.uid)
+
+        // 1. Delete Firestore document
+        userDocRef.delete { error in
+            if let error = error {
+                self.errorMessage = "Error deleting user data: \(error.localizedDescription)"
+                self.showingError = true
+                return
+            }
+
+            // 2. Delete Firebase Auth user
+            user.delete { error in
+                if let error = error {
+                    self.errorMessage = "Error deleting account: \(error.localizedDescription)"
+                    self.showingError = true
+                } else {
+                    // 3. Sign out, which will trigger view redirection via AuthStateObserver
+                    print("Account deleted successfully.")
+                    signOut()
+                }
+            }
         }
     }
 }
