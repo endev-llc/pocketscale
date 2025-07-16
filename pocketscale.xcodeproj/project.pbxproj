@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		57216CA02E282C60006EE3CC /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 57216C9F2E282C60006EE3CC /* FirebaseStorage */; };
 		57658A8C2E1789090017E130 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 57658A8B2E1789090017E130 /* FirebaseAI */; };
 		57658A8E2E1789090017E130 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 57658A8D2E1789090017E130 /* FirebaseAuth */; };
 		57658A902E1789090017E130 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 57658A8F2E1789090017E130 /* FirebaseFirestore */; };
@@ -80,6 +81,7 @@
 				57658A8C2E1789090017E130 /* FirebaseAI in Frameworks */,
 				57658A902E1789090017E130 /* FirebaseFirestore in Frameworks */,
 				57658A8E2E1789090017E130 /* FirebaseAuth in Frameworks */,
+				57216CA02E282C60006EE3CC /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -154,6 +156,7 @@
 				57658A8B2E1789090017E130 /* FirebaseAI */,
 				57658A8D2E1789090017E130 /* FirebaseAuth */,
 				57658A8F2E1789090017E130 /* FirebaseFirestore */,
+				57216C9F2E282C60006EE3CC /* FirebaseStorage */,
 			);
 			productName = pocketscale;
 			productReference = 57739EFF2E1318F300CFB30B /* pocketscale.app */;
@@ -445,7 +448,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = pocketscale/pocketscale.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = CS8BA285Y7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -482,7 +485,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = pocketscale/pocketscale.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = CS8BA285Y7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -637,6 +640,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		57216C9F2E282C60006EE3CC /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 57AF05D02E145F7200C54B11 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
 		57658A8B2E1789090017E130 /* FirebaseAI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 57AF05D02E145F7200C54B11 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

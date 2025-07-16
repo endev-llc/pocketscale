@@ -9,6 +9,7 @@ import SwiftUI
 import AVFoundation
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseStorage // Import Firebase Storage
 
 struct MainView: View {
     @StateObject private var geminiService = GeminiService()
@@ -27,6 +28,7 @@ struct MainView: View {
     @State private var isShowingShareSheet = false // State for the share sheet
     @State private var showingFeedbackSheet = false // State for the feedback sheet
     @State private var showingDeleteConfirmation = false // State for the delete account alert
+    @State private var showingScanHistory = false // State for scan history sheet
 
 
     // Animation States
@@ -101,6 +103,9 @@ struct MainView: View {
         }
         .sheet(isPresented: $showingFeedbackSheet) {
             FeedbackView(isPresented: $showingFeedbackSheet)
+        }
+        .sheet(isPresented: $showingScanHistory) {
+            ScanHistoryView(isPresented: $showingScanHistory)
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
@@ -365,6 +370,17 @@ struct MainView: View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: {
                 showingSettings = false
+                showingScanHistory = true
+            }) {
+                HStack {
+                    Image(systemName: "clock.arrow.circlepath")
+                    Text("Scan History")
+                }
+                .padding()
+            }
+            Divider()
+            Button(action: {
+                showingSettings = false
                 showingFeedbackSheet = true
             }) {
                 HStack {
@@ -442,6 +458,10 @@ struct MainView: View {
         Task {
             do {
                 let result = try await geminiService.analyzeFood(image: image)
+                
+                // Save the result to Firebase
+                await saveScan(result: result, image: image)
+                
                 await MainActor.run {
                     self.analysisResult = result
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -458,6 +478,57 @@ struct MainView: View {
             }
         }
     }
+
+    private func saveScan(result: WeightAnalysisResponse, image: UIImage) async {
+            guard let userId = Auth.auth().currentUser?.uid else { return }
+
+            // 1. Upload image to Firebase Storage
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+            let storageRef = Storage.storage().reference()
+            let imageId = UUID().uuidString
+            let imageRef = storageRef.child("scans/\(userId)/\(imageId).jpg")
+
+            do {
+                _ = try await imageRef.putDataAsync(imageData)
+                let downloadURL = try await imageRef.downloadURL()
+
+                // 2. Prepare scan data for Firestore
+                let scanData: [String: Any] = [
+                    "userId": userId,
+                    "timestamp": Timestamp(date: Date()),
+                    "imageUrl": downloadURL.absoluteString,
+                    "overall_food_item": result.overall_food_item,
+                    "constituent_food_items": result.constituent_food_items.map { ["name": $0.name, "weight_grams": $0.weight_grams] },
+                    "total_weight_grams": result.total_weight_grams,
+                    "confidence_percentage": result.confidence_percentage
+                ]
+
+                // 3. Save to Firestore using a batch write for atomicity
+                let db = Firestore.firestore()
+                let batch = db.batch()
+
+                // Path for root `scans` collection
+                let rootScanRef = db.collection("scans").document()
+                
+                // Path for user's subcollection `userScans`
+                let userScanRef = db.collection("users").document(userId).collection("userScans").document(rootScanRef.documentID)
+
+                // CORRECTED: Use the 'forDocument' argument label
+                batch.setData(scanData, forDocument: rootScanRef)
+                batch.setData(scanData, forDocument: userScanRef)
+
+                try await batch.commit()
+                print("✅ Scan saved successfully to both collections.")
+
+            } catch {
+                print("❌ Failed to save scan: \(error.localizedDescription)")
+                // Optionally update UI to show this specific error
+                await MainActor.run {
+                    self.errorMessage = "Failed to save scan to history: \(error.localizedDescription)"
+                    self.showingError = true
+                }
+            }
+        }
     
     private func confidenceColor(_ confidence: Int) -> Color {
         if confidence >= 80 { return .green }
