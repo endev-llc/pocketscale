@@ -12,6 +12,7 @@ import FirebaseFirestore
 import FirebaseStorage
 
 struct MainView: View {
+    @EnvironmentObject var authStateObserver: AuthStateObserver
     @StateObject private var geminiService = GeminiService()
     @StateObject private var cameraManager = PersistentCameraManager.shared
     
@@ -29,6 +30,7 @@ struct MainView: View {
     @State private var showingFeedbackSheet = false // State for the feedback sheet
     @State private var showingDeleteConfirmation = false // State for the delete account alert
     @State private var showingScanHistory = false // State for scan history sheet
+    @State private var showingAuthView = false
 
 
     // Animation States
@@ -94,6 +96,9 @@ struct MainView: View {
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $capturedImage, isPresented: $showingImagePicker, sourceType: .photoLibrary)
         }
+        .sheet(isPresented: $showingAuthView) {
+            AuthView()
+        }
         .sheet(isPresented: $isShowingShareSheet) {
             // Construct the items to share
             if let result = analysisResult, let image = capturedImage {
@@ -138,42 +143,48 @@ struct MainView: View {
     // MARK: - Child Views
 
     private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("PocketScale")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                Text("Camera-based food scale")
-                    .font(.system(size: 15, weight: .regular, design: .rounded))
-                    .foregroundColor(.secondary)
-            }
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("PocketScale")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text("Camera-based food scale")
+                        .font(.system(size: 15, weight: .regular, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
 
-            Spacer()
-            
-            // Scan History Button
-            Button(action: { showingScanHistory.toggle() }) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.primary)
-                    .frame(width: 44, height: 44)
-                    .background(Color(.systemBackground).opacity(0.5))
-                    .clipShape(Circle())
-            }
+                Spacer()
+                
+                // Scan History Button
+                Button(action: {
+                    if authStateObserver.user == nil {
+                        showingAuthView = true
+                    } else {
+                        showingScanHistory.toggle()
+                    }
+                }) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 44, height: 44)
+                        .background(Color(.systemBackground).opacity(0.5))
+                        .clipShape(Circle())
+                }
 
-            // Settings Button
-            Button(action: { showingSettings.toggle() }) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.primary)
-                    .frame(width: 44, height: 44)
-                    .background(Color(.systemBackground).opacity(0.5))
-                    .clipShape(Circle())
-            }
-            .popover(isPresented: $showingSettings) {
-                settingsMenu.presentationCompactAdaptation(.popover)
+                // Settings Button
+                Button(action: { showingSettings.toggle() }) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 44, height: 44)
+                        .background(Color(.systemBackground).opacity(0.5))
+                        .clipShape(Circle())
+                }
+                .popover(isPresented: $showingSettings) {
+                    settingsMenu.presentationCompactAdaptation(.popover)
+                }
             }
         }
-    }
 
     // MODIFIED: This view has been refactored to fix the layout bug.
     private var cameraView: some View {
@@ -339,9 +350,13 @@ struct MainView: View {
             Spacer()
 
             Button(action: {
-                if !isWeighing {
-                    shouldAnalyzeAfterCapture = true
-                    cameraManager.capturePhoto()
+                if authStateObserver.user == nil {
+                    showingAuthView = true
+                } else {
+                    if !isWeighing {
+                        shouldAnalyzeAfterCapture = true
+                        cameraManager.capturePhoto()
+                    }
                 }
             }) {
                 ZStack {
@@ -359,10 +374,14 @@ struct MainView: View {
             Spacer()
             
             Button(action: {
-                // Turn flash off when opening photo library
-                cameraManager.turnFlashOff()
-                shouldAnalyzeAfterCapture = true
-                showingImagePicker = true
+                if authStateObserver.user == nil {
+                    showingAuthView = true
+                } else {
+                    // Turn flash off when opening photo library
+                    cameraManager.turnFlashOff()
+                    shouldAnalyzeAfterCapture = true
+                    showingImagePicker = true
+                }
             }) {
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 24, weight: .medium))
@@ -378,43 +397,58 @@ struct MainView: View {
     }
     
     private var settingsMenu: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button(action: {
-                showingSettings = false
-                showingFeedbackSheet = true
-            }) {
-                HStack {
-                    Image(systemName: "envelope")
-                    Text("Send Us Feedback")
+            VStack(alignment: .leading, spacing: 0) {
+                if authStateObserver.user == nil {
+                    // Menu for unauthenticated users
+                    Button(action: {
+                        showingSettings = false
+                        showingAuthView = true
+                    }) {
+                        HStack {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                            Text("Sign In")
+                        }
+                        .padding()
+                    }
+                } else {
+                    // Menu for authenticated users
+                    Button(action: {
+                        showingSettings = false
+                        showingFeedbackSheet = true
+                    }) {
+                        HStack {
+                            Image(systemName: "envelope")
+                            Text("Send Us Feedback")
+                        }
+                        .padding()
+                    }
+                    Divider()
+                    Button(action: {
+                        signOut()
+                        showingSettings = false
+                    }) {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("Sign Out")
+                        }
+                        .foregroundColor(.red)
+                        .padding()
+                    }
+                    Divider()
+                    Button(action: {
+                        showingSettings = false
+                        showingDeleteConfirmation = true
+                    }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Delete Account")
+                        }
+                        .foregroundColor(.red)
+                        .padding()
+                    }
                 }
-                .padding()
-            }
-            Divider()
-            Button(action: {
-                signOut()
-                showingSettings = false
-            }) {
-                HStack {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                    Text("Sign Out")
-                }
-                .foregroundColor(.red)
-                .padding()
-            }
-            Divider()
-            Button(action: {
-                showingSettings = false
-                showingDeleteConfirmation = true
-            }) {
-                HStack {
-                    Image(systemName: "trash")
-                    Text("Delete Account")
-                }
-                .foregroundColor(.red)
-                .padding()
             }
         }
-    }
 
     // MARK: - Methods
 
@@ -610,4 +644,5 @@ struct ShareSheet: UIViewControllerRepresentable {
 
 #Preview {
     MainView()
+        .environmentObject(AuthStateObserver())
 }

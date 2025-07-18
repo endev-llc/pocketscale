@@ -32,9 +32,11 @@ struct pocketscaleApp: App {
                         SubscriptionView()
                     }
                 } else {
-                    AuthView()
+                    MainView()
                 }
             }
+            .environmentObject(authStateObserver)
+            .environmentObject(subscriptionManager)
             .animation(.easeInOut(duration: 0.3), value: authStateObserver.user != nil)
             .animation(.easeInOut(duration: 0.3), value: subscriptionManager.hasAccessToApp)
             .onChange(of: authStateObserver.user) { oldUser, newUser in
