@@ -13,7 +13,8 @@ import FirebaseAuth
 struct pocketscaleApp: App {
     @StateObject private var authStateObserver = AuthStateObserver()
     @StateObject private var subscriptionManager = SubscriptionManager.shared
-    
+    @State private var showSubscriptionAfterLogin = false
+
     init() {
         FirebaseApp.configure()
     }
@@ -26,11 +27,10 @@ struct pocketscaleApp: App {
                     Color(.systemBackground)
                         .ignoresSafeArea()
                 } else if authStateObserver.user != nil {
-                    if subscriptionManager.hasAccessToApp {
-                        MainView()
-                    } else {
-                        SubscriptionView()
-                    }
+                    MainView()
+                        .fullScreenCover(isPresented: $showSubscriptionAfterLogin) {
+                            SubscriptionView()
+                        }
                 } else {
                     MainView()
                 }
@@ -44,6 +44,10 @@ struct pocketscaleApp: App {
                 if oldUser == nil && newUser != nil {
                     Task {
                         await subscriptionManager.refreshSubscriptionStatus()
+                        // Only show subscription view if the user does not have access
+                        if !subscriptionManager.hasAccessToApp {
+                            showSubscriptionAfterLogin = true
+                        }
                     }
                 }
             }

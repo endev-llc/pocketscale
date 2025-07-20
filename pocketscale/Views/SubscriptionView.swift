@@ -11,6 +11,7 @@ import StoreKit
 struct SubscriptionView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.presentationMode) var presentationMode
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var isLoading = false
@@ -25,7 +26,7 @@ struct SubscriptionView: View {
     }
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             // Elegant gradient background that matches AuthView
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -57,7 +58,7 @@ struct SubscriptionView: View {
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                         }
-                        .padding(.top, 30)
+                        .padding(.top, 60) // Increased top padding to make space for the close button
                         .padding(.bottom, 30)
                         .padding(.horizontal, 24)
                         .opacity(isAnimating ? 1 : 0)
@@ -157,6 +158,20 @@ struct SubscriptionView: View {
                     }
                 }
             }
+            
+            // Close button
+            Button(action: {
+                presentationMode.wrappedValue.dismiss()
+            }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.primary)
+                    .padding(8)
+                    .background(Color(.systemGray5).opacity(0.7))
+                    .clipShape(Circle())
+            }
+            .padding()
+            .padding(.top, 10)
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 0.8)) {
@@ -167,6 +182,11 @@ struct SubscriptionView: View {
             Button("OK") { }
         } message: {
             Text(errorMessage)
+        }
+        .onChange(of: subscriptionManager.hasAccessToApp) { oldValue, newValue in
+            if newValue {
+                presentationMode.wrappedValue.dismiss()
+            }
         }
     }
     

@@ -13,6 +13,7 @@ import FirebaseStorage
 
 struct MainView: View {
     @EnvironmentObject var authStateObserver: AuthStateObserver
+    @EnvironmentObject var subscriptionManager: SubscriptionManager
     @StateObject private var geminiService = GeminiService()
     @StateObject private var cameraManager = PersistentCameraManager.shared
     
@@ -31,6 +32,7 @@ struct MainView: View {
     @State private var showingDeleteConfirmation = false // State for the delete account alert
     @State private var showingScanHistory = false // State for scan history sheet
     @State private var showingAuthView = false
+    @State private var showingSubscriptionView = false
 
 
     // Animation States
@@ -111,6 +113,9 @@ struct MainView: View {
         }
         .sheet(isPresented: $showingScanHistory) {
             ScanHistoryView(isPresented: $showingScanHistory)
+        }
+        .fullScreenCover(isPresented: $showingSubscriptionView) {
+            SubscriptionView()
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }
@@ -353,9 +358,13 @@ struct MainView: View {
                 if authStateObserver.user == nil {
                     showingAuthView = true
                 } else {
-                    if !isWeighing {
-                        shouldAnalyzeAfterCapture = true
-                        cameraManager.capturePhoto()
+                    if subscriptionManager.hasAccessToApp {
+                        if !isWeighing {
+                            shouldAnalyzeAfterCapture = true
+                            cameraManager.capturePhoto()
+                        }
+                    } else {
+                        showingSubscriptionView = true
                     }
                 }
             }) {
@@ -377,10 +386,14 @@ struct MainView: View {
                 if authStateObserver.user == nil {
                     showingAuthView = true
                 } else {
-                    // Turn flash off when opening photo library
-                    cameraManager.turnFlashOff()
-                    shouldAnalyzeAfterCapture = true
-                    showingImagePicker = true
+                    if subscriptionManager.hasAccessToApp {
+                        // Turn flash off when opening photo library
+                        cameraManager.turnFlashOff()
+                        shouldAnalyzeAfterCapture = true
+                        showingImagePicker = true
+                    } else {
+                        showingSubscriptionView = true
+                    }
                 }
             }) {
                 Image(systemName: "photo.on.rectangle.angled")
@@ -645,4 +658,5 @@ struct ShareSheet: UIViewControllerRepresentable {
 #Preview {
     MainView()
         .environmentObject(AuthStateObserver())
+        .environmentObject(SubscriptionManager.shared)
 }
