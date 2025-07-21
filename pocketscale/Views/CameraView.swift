@@ -79,6 +79,7 @@ class PersistentCameraManager: NSObject, ObservableObject {
             }
         case .denied, .restricted:
             print("❌ Camera access denied")
+            DispatchQueue.main.async { self.authorizationStatus = AVCaptureDevice.authorizationStatus(for: .video) }
         @unknown default:
             break
         }
@@ -169,7 +170,12 @@ class PersistentCameraManager: NSObject, ObservableObject {
     }
     
     func startSession() {
-        guard !isSessionRunning && authorizationStatus == .authorized else { return }
+        guard !isSessionRunning && authorizationStatus == .authorized else {
+            if authorizationStatus != .authorized {
+                print("❌ Camera not authorized")
+            }
+            return
+        }
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }

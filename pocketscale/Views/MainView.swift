@@ -33,7 +33,7 @@ struct MainView: View {
     @State private var showingScanHistory = false // State for scan history sheet
     @State private var showingAuthView = false
     @State private var showingSubscriptionView = false
-
+    @State private var showingCameraPermission = false
 
     // Animation States
     @State private var focusPoint: CGPoint = .zero
@@ -121,6 +121,16 @@ struct MainView: View {
             Button("OK") { }
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
+        }
+        .alert("Camera Permission Required", isPresented: $showingCameraPermission) {
+            Button("Settings") {
+                if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(settingsUrl)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("PocketScale needs camera access to scan and analyze your food for weight estimation.")
         }
         .alert("Delete Account", isPresented: $showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -359,9 +369,13 @@ struct MainView: View {
                     showingAuthView = true
                 } else {
                     if subscriptionManager.hasAccessToApp {
-                        if !isWeighing {
-                            shouldAnalyzeAfterCapture = true
-                            cameraManager.capturePhoto()
+                        if cameraManager.authorizationStatus != .authorized {
+                            showingCameraPermission = true
+                        } else {
+                            if !isWeighing {
+                                shouldAnalyzeAfterCapture = true
+                                cameraManager.capturePhoto()
+                            }
                         }
                     } else {
                         showingSubscriptionView = true

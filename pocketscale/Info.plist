@@ -4,5 +4,7 @@
 <dict>
 	<key>ANTHROPIC_API_KEY</key>
 	<string>$(ANTHROPIC_API_KEY)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PocketScale needs camera access to scan and analyze your food for weight estimation. This is essential for the app&apos;s core functionality of creating your personal food tracking database.</string>
 </dict>
 </plist>
