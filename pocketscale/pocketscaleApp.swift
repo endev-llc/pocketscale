@@ -14,6 +14,7 @@ struct pocketscaleApp: App {
     @StateObject private var authStateObserver = AuthStateObserver()
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showSubscriptionAfterLogin = false
+    @State private var hasSeenUserBefore = false
 
     init() {
         FirebaseApp.configure()
@@ -40,14 +41,22 @@ struct pocketscaleApp: App {
             .animation(.easeInOut(duration: 0.3), value: authStateObserver.user != nil)
             .animation(.easeInOut(duration: 0.3), value: subscriptionManager.hasAccessToApp)
             .onChange(of: authStateObserver.user) { oldUser, newUser in
-                // Refresh subscription status when user signs in (background refresh)
-                if oldUser == nil && newUser != nil {
-                    Task {
-                        await subscriptionManager.refreshSubscriptionStatus()
-                        // Only show subscription view if the user does not have access
-                        if !subscriptionManager.hasAccessToApp {
-                            showSubscriptionAfterLogin = true
+                // Track if we've seen any user (including on app startup)
+                if newUser != nil {
+                    if hasSeenUserBefore {
+                        // Only show subscription view for actual sign-ins (not first time seeing user)
+                        if oldUser == nil {
+                            Task {
+                                await subscriptionManager.refreshSubscriptionStatus()
+                                // Only show subscription view if the user does not have access
+                                if !subscriptionManager.hasAccessToApp {
+                                    showSubscriptionAfterLogin = true
+                                }
+                            }
                         }
+                    } else {
+                        // First time seeing a user - mark as seen but don't show subscription
+                        hasSeenUserBefore = true
                     }
                 }
             }
