@@ -14,6 +14,9 @@ import CryptoKit
 class AuthenticationViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var currentNonce: String?
+    
+    // Completion handler for successful authentication
+    var onAuthSuccess: (() -> Void)?
 
     func handleSignInWithAppleRequest(_ request: ASAuthorizationAppleIDRequest) {
         request.requestedScopes = [.fullName, .email]
@@ -67,6 +70,10 @@ class AuthenticationViewModel: ObservableObject {
                     if let document = document, document.exists {
                         // User already exists, no action needed
                         print("User already exists")
+                        // Call success handler - sign in successful
+                        DispatchQueue.main.async {
+                            self.onAuthSuccess?()
+                        }
                     } else {
                         // New user, create basic profile document (no subscription status)
                         userDoc.setData([
@@ -78,6 +85,11 @@ class AuthenticationViewModel: ObservableObject {
                         ]) { err in
                             if let err = err {
                                 self.errorMessage = "Error writing document: \(err)"
+                            } else {
+                                // Call success handler - sign up successful
+                                DispatchQueue.main.async {
+                                    self.onAuthSuccess?()
+                                }
                             }
                         }
                     }

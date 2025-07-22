@@ -11,6 +11,7 @@ import AuthenticationServices
 struct AuthView: View {
     @StateObject private var viewModel = AuthenticationViewModel()
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) private var dismiss // Added this
     
     // State for entry animation
     @State private var isAnimating = false
@@ -144,6 +145,11 @@ struct AuthView: View {
         .onAppear {
             withAnimation(.easeInOut(duration: 0.8)) {
                 isAnimating = true
+            }
+            
+            // Set the completion handler for successful authentication
+            viewModel.onAuthSuccess = {
+                dismiss()
             }
         }
         .sheet(isPresented: $showingPrivacyPolicy) {
