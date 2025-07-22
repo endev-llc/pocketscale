@@ -170,7 +170,7 @@ struct MainView: View {
 
                 Spacer()
                 
-                // Scan History Button
+                // Scan History Button - ONLY place that requires auth
                 Button(action: {
                     if authStateObserver.user == nil {
                         showingAuthView = true
@@ -364,22 +364,19 @@ struct MainView: View {
 
             Spacer()
 
+            // MODIFIED: Removed auth check, only check subscription
             Button(action: {
-                if authStateObserver.user == nil {
-                    showingAuthView = true
-                } else {
-                    if subscriptionManager.hasAccessToApp {
-                        if cameraManager.authorizationStatus != .authorized {
-                            showingCameraPermission = true
-                        } else {
-                            if !isWeighing {
-                                shouldAnalyzeAfterCapture = true
-                                cameraManager.capturePhoto()
-                            }
-                        }
+                if subscriptionManager.hasAccessToApp {
+                    if cameraManager.authorizationStatus != .authorized {
+                        showingCameraPermission = true
                     } else {
-                        showingSubscriptionView = true
+                        if !isWeighing {
+                            shouldAnalyzeAfterCapture = true
+                            cameraManager.capturePhoto()
+                        }
                     }
+                } else {
+                    showingSubscriptionView = true
                 }
             }) {
                 ZStack {
@@ -396,18 +393,15 @@ struct MainView: View {
 
             Spacer()
             
+            // MODIFIED: Removed auth check, only check subscription
             Button(action: {
-                if authStateObserver.user == nil {
-                    showingAuthView = true
+                if subscriptionManager.hasAccessToApp {
+                    // Turn flash off when opening photo library
+                    cameraManager.turnFlashOff()
+                    shouldAnalyzeAfterCapture = true
+                    showingImagePicker = true
                 } else {
-                    if subscriptionManager.hasAccessToApp {
-                        // Turn flash off when opening photo library
-                        cameraManager.turnFlashOff()
-                        shouldAnalyzeAfterCapture = true
-                        showingImagePicker = true
-                    } else {
-                        showingSubscriptionView = true
-                    }
+                    showingSubscriptionView = true
                 }
             }) {
                 Image(systemName: "photo.on.rectangle.angled")
@@ -529,9 +523,11 @@ struct MainView: View {
                     }
                 }
                 
-                // Start a new Task to save the scan in the background
-                Task {
-                    await saveScan(result: result, image: image)
+                // Start a new Task to save the scan in the background (only if user is authenticated)
+                if authStateObserver.user != nil {
+                    Task {
+                        await saveScan(result: result, image: image)
+                    }
                 }
 
             } catch {

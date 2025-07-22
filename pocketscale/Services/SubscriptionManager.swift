@@ -64,15 +64,7 @@ class SubscriptionManager: ObservableObject {
     
     // MARK: - Background Subscription Refresh
     func refreshSubscriptionStatus() async {
-        guard Auth.auth().currentUser != nil else {
-            await MainActor.run {
-                self.hasAccessToApp = false
-                self.cacheSubscriptionStatus(false)
-            }
-            return
-        }
-        
-        // Check Apple's subscription status in background
+        // FIXED: Check StoreKit first, regardless of authentication status
         var hasActiveSubscription = false
         
         for await result in StoreKit.Transaction.currentEntitlements {
@@ -92,8 +84,10 @@ class SubscriptionManager: ObservableObject {
             self.cacheSubscriptionStatus(hasActiveSubscription)
         }
         
-        // Update Firebase for analytics (non-blocking)
-        await updateFirebaseSubscriptionStatus(hasActiveSubscription ? .professional : .free)
+        // Update Firebase for analytics (non-blocking, only if authenticated)
+        if Auth.auth().currentUser != nil {
+            await updateFirebaseSubscriptionStatus(hasActiveSubscription ? .professional : .free)
+        }
     }
     
     // MARK: - Product Loading
@@ -110,10 +104,6 @@ class SubscriptionManager: ObservableObject {
     func startFreeTrial() async throws {
         guard let product = products.first(where: { $0.id == monthlyProductID }) else {
             throw SubscriptionError.productNotFound
-        }
-        
-        guard Auth.auth().currentUser != nil else {
-            throw SubscriptionError.notAuthenticated
         }
         
         try await purchaseProduct(product)
