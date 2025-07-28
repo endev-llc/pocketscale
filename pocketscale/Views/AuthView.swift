@@ -189,12 +189,10 @@ struct AuthView: View {
             }
         }
         .sheet(isPresented: $showingPrivacyPolicy) {
-            // This assumes you have a PrivacyPolicyView defined elsewhere
-            // PrivacyPolicyView(isPresented: $showingPrivacyPolicy)
+            PrivacyPolicyView(isPresented: $showingPrivacyPolicy)
         }
         .sheet(isPresented: $showingTermsOfService) {
-            // This assumes you have a TermsOfServiceView defined elsewhere
-            // TermsOfServiceView(isPresented: $showingTermsOfService)
+            TermsOfServiceView(isPresented: $showingTermsOfService)
         }
     }
     
