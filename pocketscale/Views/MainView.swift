@@ -98,8 +98,23 @@ struct MainView: View {
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $capturedImage, isPresented: $showingImagePicker, sourceType: .photoLibrary)
         }
+        // MARK: - MODIFIED
+        // This now uses the completion handler from AuthView to manage the presentation flow.
         .fullScreenCover(isPresented: $showingAuthView) {
-            AuthView(onDismiss: { showingAuthView = false })
+            AuthView { result in
+                // First, always dismiss the AuthView
+                showingAuthView = false
+                
+                // Then, check the result to see what to do next
+                if result == .signedInAndFree {
+                    // If the user is free, present the subscription view.
+                    // A slight delay is needed to allow the first sheet to finish its dismiss animation.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showingSubscriptionView = true
+                    }
+                }
+                // For .signedInAndSubscribed or .cancelled, we do nothing else.
+            }
         }
         .sheet(isPresented: $isShowingShareSheet) {
             // Construct the items to share

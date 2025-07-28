@@ -8,12 +8,19 @@
 import SwiftUI
 import AuthenticationServices
 
+// MARK: - (NEW) Result for the completion handler
+enum AuthCompletionResult {
+    case signedInAndSubscribed
+    case signedInAndFree
+    case cancelled
+}
+
 struct AuthView: View {
     @StateObject private var viewModel = AuthenticationViewModel()
     @Environment(\.colorScheme) var colorScheme
     
-    // Add this parameter
-    let onDismiss: () -> Void
+    // MARK: - (MODIFIED) Use a completion handler instead of a simple dismiss closure
+    let onCompletion: (AuthCompletionResult) -> Void
     
     // State for entry animation
     @State private var isAnimating = false
@@ -146,9 +153,9 @@ struct AuthView: View {
             }
             .ignoresSafeArea()
             
-            // Close button
+            // MARK: - (MODIFIED) Close button now uses the completion handler
             Button(action: {
-                onDismiss()
+                onCompletion(.cancelled)
             }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .bold))
@@ -165,22 +172,29 @@ struct AuthView: View {
                 isAnimating = true
             }
             
-            // Set the completion handler for successful authentication
+            // MARK: - (MODIFIED) onAuthSuccess now calls the completion handler with the correct result
             viewModel.onAuthSuccess = {
-                // Refresh subscription status after successful auth, then dismiss
                 Task {
                     await SubscriptionManager.shared.refreshSubscriptionStatus()
+                    let hasAccess = SubscriptionManager.shared.hasAccessToApp
+                    
                     await MainActor.run {
-                        onDismiss()
+                        if hasAccess {
+                            onCompletion(.signedInAndSubscribed)
+                        } else {
+                            onCompletion(.signedInAndFree)
+                        }
                     }
                 }
             }
         }
         .sheet(isPresented: $showingPrivacyPolicy) {
-            PrivacyPolicyView(isPresented: $showingPrivacyPolicy)
+            // This assumes you have a PrivacyPolicyView defined elsewhere
+            // PrivacyPolicyView(isPresented: $showingPrivacyPolicy)
         }
         .sheet(isPresented: $showingTermsOfService) {
-            TermsOfServiceView(isPresented: $showingTermsOfService)
+            // This assumes you have a TermsOfServiceView defined elsewhere
+            // TermsOfServiceView(isPresented: $showingTermsOfService)
         }
     }
     
@@ -220,7 +234,9 @@ struct AuthView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - (MODIFIED) Preview now uses the new completion handler
 #Preview {
-    AuthView(onDismiss: {})
+    AuthView(onCompletion: { result in
+        print("AuthView completed with result: \(result)")
+    })
 }
