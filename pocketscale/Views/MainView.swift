@@ -34,11 +34,17 @@ struct MainView: View {
     @State private var showingAuthView = false
     @State private var showingSubscriptionView = false
     @State private var showingCameraPermission = false
+    @State private var showingPreferences = false // New state for preferences view
+
 
     // Animation States
     @State private var focusPoint: CGPoint = .zero
     @State private var showingFocusIndicator = false
     @State private var isAnimatingIn = false
+    
+    // User Preferences
+    @AppStorage("unitPreference") private var unitPreference: UnitPreference = .ounces
+
 
     var body: some View {
         ZStack {
@@ -128,6 +134,9 @@ struct MainView: View {
         }
         .sheet(isPresented: $showingScanHistory) {
             ScanHistoryView(isPresented: $showingScanHistory)
+        }
+        .sheet(isPresented: $showingPreferences) {
+            PreferencesView(isPresented: $showingPreferences)
         }
         .fullScreenCover(isPresented: $showingSubscriptionView) {
             SubscriptionView(onDismiss: { showingSubscriptionView = false })
@@ -303,21 +312,35 @@ struct MainView: View {
             }
 
             HStack(alignment: .bottom, spacing: 8) {
-                Text("\(String(format: "%.1f", Double(result.total_weight_grams) * 0.035274))")
-                    .font(.system(size: 58, weight: .light, design: .rounded))
-                    .foregroundColor(.primary)
-                    .kerning(-1)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("oz")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Text("(\(result.total_weight_grams)g)")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.secondary)
+                if unitPreference == .grams {
+                    Text("\(result.total_weight_grams)")
+                        .font(.system(size: 58, weight: .light, design: .rounded))
+                        .foregroundColor(.primary)
+                        .kerning(-1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("g")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text("(\(String(format: "%.1f", Double(result.total_weight_grams) * 0.035274)) oz)")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+                    .offset(y: -10)
+                } else {
+                    Text("\(String(format: "%.1f", Double(result.total_weight_grams) * 0.035274))")
+                        .font(.system(size: 58, weight: .light, design: .rounded))
+                        .foregroundColor(.primary)
+                        .kerning(-1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("oz")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text("(\(result.total_weight_grams)g)")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+                    .offset(y: -10)
                 }
-                .offset(y: -10)
-
                 Spacer()
             }
 
@@ -460,8 +483,22 @@ struct MainView: View {
     
     private var settingsMenu: some View {
             VStack(alignment: .leading, spacing: 0) {
+                
+                // Preferences Button - always available
+                Button(action: {
+                    showingSettings = false
+                    showingPreferences = true
+                }) {
+                    HStack {
+                        Image(systemName: "slider.horizontal.3")
+                        Text("Preferences")
+                    }
+                    .padding()
+                }
+
                 if authStateObserver.user == nil {
                     // Menu for unauthenticated users
+                    Divider()
                     Button(action: {
                         showingSettings = false
                         showingAuthView = true
@@ -474,6 +511,7 @@ struct MainView: View {
                     }
                 } else {
                     // Menu for authenticated users
+                    Divider()
                     Button(action: {
                         showingSettings = false
                         showingFeedbackSheet = true
