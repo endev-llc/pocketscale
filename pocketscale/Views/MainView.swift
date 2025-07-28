@@ -146,12 +146,34 @@ struct MainView: View {
                 startMeasurement()
             }
         }
+        .onChange(of: authStateObserver.user) { oldValue, newValue in
+            checkAndPresentRequiredViews()
+        }
+        .onChange(of: subscriptionManager.hasAccessToApp) { oldValue, newValue in
+            checkAndPresentRequiredViews()
+        }
         .onAppear {
             if !isAnimatingIn {
                 withAnimation {
                     isAnimatingIn = true
                 }
             }
+            // Check if we need to present auth or subscription views
+            checkAndPresentRequiredViews()
+        }
+    }
+    
+    // MARK: - Helper Method
+    private func checkAndPresentRequiredViews() {
+        // Don't present if we're already showing something
+        if showingAuthView || showingSubscriptionView {
+            return
+        }
+        
+        if authStateObserver.user == nil {
+            showingAuthView = true
+        } else if !subscriptionManager.hasAccessToApp {
+            showingSubscriptionView = true
         }
     }
     

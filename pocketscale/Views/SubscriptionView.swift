@@ -183,6 +183,11 @@ struct SubscriptionView: View {
         } message: {
             Text(errorMessage)
         }
+        .onChange(of: subscriptionManager.hasAccessToApp) { oldValue, newValue in
+            if newValue {
+                onDismiss()
+            }
+        }
     }
     
     // MARK: - Functions (Unchanged)

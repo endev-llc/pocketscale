@@ -161,21 +161,21 @@ struct AuthView: View {
             .padding(.top, 10)
         }
         .onAppear {
-                    withAnimation(.easeInOut(duration: 0.8)) {
-                        isAnimating = true
-                    }
-                    
-                    // Set the completion handler for successful authentication
-                    viewModel.onAuthSuccess = {
-                        // Refresh subscription status after successful auth
-                        Task {
-                            await SubscriptionManager.shared.refreshSubscriptionStatus()
-                            // Don't call onDismiss() - let the main app routing handle the flow
-                            // The app will automatically show SubscriptionView if no subscription,
-                            // or MainView if there is an active subscription
-                        }
+            withAnimation(.easeInOut(duration: 0.8)) {
+                isAnimating = true
+            }
+            
+            // Set the completion handler for successful authentication
+            viewModel.onAuthSuccess = {
+                // Refresh subscription status after successful auth, then dismiss
+                Task {
+                    await SubscriptionManager.shared.refreshSubscriptionStatus()
+                    await MainActor.run {
+                        onDismiss()
                     }
                 }
+            }
+        }
         .sheet(isPresented: $showingPrivacyPolicy) {
             PrivacyPolicyView(isPresented: $showingPrivacyPolicy)
         }
