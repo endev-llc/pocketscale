@@ -11,7 +11,7 @@ import AuthenticationServices
 struct AuthView: View {
     @StateObject private var viewModel = AuthenticationViewModel()
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.dismiss) private var dismiss // Added this
+    @Environment(\.dismiss) private var dismiss
     
     // State for entry animation
     @State private var isAnimating = false
@@ -21,7 +21,7 @@ struct AuthView: View {
     @State private var showingTermsOfService = false
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             // Elegant gradient background that adapts to light/dark mode
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -51,12 +51,12 @@ struct AuthView: View {
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
                                     .multilineTextAlignment(.center)
 
-                                Text("The camera-based food scale in your pocket.")
+                                Text("An account is required to personalize your scanning experience and save your measurements.")
                                     .font(.system(size: 17, weight: .regular, design: .rounded))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                             }
-                            .padding(.top, 30)
+                            .padding(.top, 60) // Space for close button
                             .padding(.bottom, 36)
                             .padding(.horizontal, 24)
                             .opacity(isAnimating ? 1 : 0)
@@ -65,19 +65,21 @@ struct AuthView: View {
                             // MARK: - Features Section
                             VStack(alignment: .leading, spacing: 20) {
                                 FeatureRow(
-                                    icon: "🍅",
-                                    title: "Always With You",
-                                    description: "Your portable food scale that fits in your pocket."
+                                    icon: "📱",
+                                    title: "Scan History",
+                                    description: "Save and track all your food measurements over time."
                                 )
+                                
                                 FeatureRow(
-                                    icon: "📷",
-                                    title: "Camera-Based Weighing",
-                                    description: "No physical scale needed—just point and weigh."
+                                    icon: "☁️",
+                                    title: "Cloud Backup & Sync",
+                                    description: "Your measurements are safely stored and synced across devices."
                                 )
+                                
                                 FeatureRow(
-                                    icon: "🧠",
-                                    title: "AI-Powered Accuracy",
-                                    description: "Advanced computer vision for precise measurements."
+                                    icon: "🎯",
+                                    title: "Custom Preferences",
+                                    description: "Set your preferred units, dietary goals, and measurement settings."
                                 )
                             }
                             .padding(.horizontal, 24)
@@ -141,6 +143,20 @@ struct AuthView: View {
                 }
             }
             .ignoresSafeArea()
+            
+            // Close button
+            Button(action: {
+                dismiss()
+            }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.primary)
+                    .padding(8)
+                    .background(Color(.systemGray5).opacity(0.7))
+                    .clipShape(Circle())
+            }
+            .padding()
+            .padding(.top, 10)
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 0.8)) {

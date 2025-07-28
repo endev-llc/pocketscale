@@ -98,7 +98,7 @@ struct MainView: View {
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $capturedImage, isPresented: $showingImagePicker, sourceType: .photoLibrary)
         }
-        .sheet(isPresented: $showingAuthView) {
+        .fullScreenCover(isPresented: $showingAuthView) {
             AuthView()
         }
         .sheet(isPresented: $isShowingShareSheet) {
@@ -170,7 +170,7 @@ struct MainView: View {
 
                 Spacer()
                 
-                // Scan History Button - ONLY place that requires auth
+                // Scan History Button - requires auth
                 Button(action: {
                     if authStateObserver.user == nil {
                         showingAuthView = true
@@ -364,9 +364,11 @@ struct MainView: View {
 
             Spacer()
 
-            // MODIFIED: Removed auth check, only check subscription
+            // MODIFIED: Check auth first, then subscription
             Button(action: {
-                if subscriptionManager.hasAccessToApp {
+                if authStateObserver.user == nil {
+                    showingAuthView = true
+                } else if subscriptionManager.hasAccessToApp {
                     if cameraManager.authorizationStatus != .authorized {
                         showingCameraPermission = true
                     } else {
@@ -393,9 +395,11 @@ struct MainView: View {
 
             Spacer()
             
-            // MODIFIED: Removed auth check, only check subscription
+            // MODIFIED: Check auth first, then subscription
             Button(action: {
-                if subscriptionManager.hasAccessToApp {
+                if authStateObserver.user == nil {
+                    showingAuthView = true
+                } else if subscriptionManager.hasAccessToApp {
                     // Turn flash off when opening photo library
                     cameraManager.turnFlashOff()
                     shouldAnalyzeAfterCapture = true
