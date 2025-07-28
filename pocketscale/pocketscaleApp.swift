@@ -13,6 +13,7 @@ import FirebaseAuth
 struct pocketscaleApp: App {
     @StateObject private var authStateObserver = AuthStateObserver()
     @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showMainViewDirectly = false
 
     init() {
         FirebaseApp.configure()
@@ -26,10 +27,12 @@ struct pocketscaleApp: App {
                     Color(.systemBackground)
                         .ignoresSafeArea()
                 } else {
-                    if authStateObserver.user == nil {
-                        AuthView()
+                    if showMainViewDirectly {
+                        MainView()
+                    } else if authStateObserver.user == nil {
+                        AuthView(onDismiss: { showMainViewDirectly = true })
                     } else if !subscriptionManager.hasAccessToApp {
-                        SubscriptionView()
+                        SubscriptionView(onDismiss: { showMainViewDirectly = true })
                     } else {
                         MainView()
                     }
@@ -39,6 +42,7 @@ struct pocketscaleApp: App {
             .environmentObject(subscriptionManager)
             .animation(.easeInOut(duration: 0.3), value: authStateObserver.user != nil)
             .animation(.easeInOut(duration: 0.3), value: subscriptionManager.hasAccessToApp)
+            .animation(.easeInOut(duration: 0.3), value: showMainViewDirectly)
         }
     }
 }

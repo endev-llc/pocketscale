@@ -99,7 +99,7 @@ struct MainView: View {
             ImagePicker(image: $capturedImage, isPresented: $showingImagePicker, sourceType: .photoLibrary)
         }
         .fullScreenCover(isPresented: $showingAuthView) {
-            AuthView()
+            AuthView(onDismiss: { showingAuthView = false })
         }
         .sheet(isPresented: $isShowingShareSheet) {
             // Construct the items to share
@@ -115,7 +115,7 @@ struct MainView: View {
             ScanHistoryView(isPresented: $showingScanHistory)
         }
         .fullScreenCover(isPresented: $showingSubscriptionView) {
-            SubscriptionView()
+            SubscriptionView(onDismiss: { showingSubscriptionView = false })
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK") { }

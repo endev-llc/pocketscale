@@ -11,7 +11,9 @@ import AuthenticationServices
 struct AuthView: View {
     @StateObject private var viewModel = AuthenticationViewModel()
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.dismiss) private var dismiss
+    
+    // Add this parameter
+    let onDismiss: () -> Void
     
     // State for entry animation
     @State private var isAnimating = false
@@ -146,7 +148,7 @@ struct AuthView: View {
             
             // Close button
             Button(action: {
-                dismiss()
+                onDismiss()
             }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .bold))
@@ -159,15 +161,21 @@ struct AuthView: View {
             .padding(.top, 10)
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.8)) {
-                isAnimating = true
-            }
-            
-            // Set the completion handler for successful authentication
-            viewModel.onAuthSuccess = {
-                dismiss()
-            }
-        }
+                    withAnimation(.easeInOut(duration: 0.8)) {
+                        isAnimating = true
+                    }
+                    
+                    // Set the completion handler for successful authentication
+                    viewModel.onAuthSuccess = {
+                        // Refresh subscription status after successful auth
+                        Task {
+                            await SubscriptionManager.shared.refreshSubscriptionStatus()
+                            // Don't call onDismiss() - let the main app routing handle the flow
+                            // The app will automatically show SubscriptionView if no subscription,
+                            // or MainView if there is an active subscription
+                        }
+                    }
+                }
         .sheet(isPresented: $showingPrivacyPolicy) {
             PrivacyPolicyView(isPresented: $showingPrivacyPolicy)
         }
@@ -214,5 +222,5 @@ struct AuthView: View {
 
 // MARK: - Preview
 #Preview {
-    AuthView()
+    AuthView(onDismiss: {})
 }

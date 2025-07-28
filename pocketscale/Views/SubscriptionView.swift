@@ -11,7 +11,7 @@ import StoreKit
 struct SubscriptionView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.presentationMode) var presentationMode
+    let onDismiss: () -> Void
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var isLoading = false
@@ -161,7 +161,7 @@ struct SubscriptionView: View {
             
             // Close button
             Button(action: {
-                presentationMode.wrappedValue.dismiss()
+                onDismiss()
             }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .bold))
@@ -182,11 +182,6 @@ struct SubscriptionView: View {
             Button("OK") { }
         } message: {
             Text(errorMessage)
-        }
-        .onChange(of: subscriptionManager.hasAccessToApp) { oldValue, newValue in
-            if newValue {
-                presentationMode.wrappedValue.dismiss()
-            }
         }
     }
     
@@ -326,5 +321,5 @@ struct FeatureRow: View {
 
 // MARK: - Preview
 #Preview {
-    SubscriptionView()
+    SubscriptionView(onDismiss: {})
 }
