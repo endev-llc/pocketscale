@@ -16,6 +16,7 @@ struct MainView: View {
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @StateObject private var geminiService = GeminiService()
     @StateObject private var cameraManager = PersistentCameraManager.shared
+    @StateObject private var volumeButtonManager = VolumeButtonManager()
     
     // TrueDepth Integration
     @State private var isVolumeMode = false
@@ -222,6 +223,31 @@ struct MainView: View {
                 showingTrueDepthOverlay = true
             }
         }
+        .onChange(of: volumeButtonManager.volumePressed) { _, pressed in
+            if pressed {
+                // Trigger capture same as button
+                if authStateObserver.user == nil {
+                    showingAuthView = true
+                } else if subscriptionManager.hasAccessToApp {
+                    if cameraManager.authorizationStatus != .authorized {
+                        showingCameraPermission = true
+                    } else {
+                        if !isWeighing {
+                            if isVolumeMode {
+                                // Trigger TrueDepth flow
+                                trueDepthManager.captureDepthAndPhoto()
+                            } else {
+                                // Standard flow
+                                shouldAnalyzeAfterCapture = true
+                                cameraManager.capturePhoto()
+                            }
+                        }
+                    }
+                } else {
+                    showingSubscriptionView = true
+                }
+            }
+        }
         .onAppear {
             if !isAnimatingIn {
                 withAnimation {
@@ -230,6 +256,12 @@ struct MainView: View {
             }
             // Check if we need to present auth or subscription views
             checkAndPresentRequiredViews()
+            
+            // Setup volume button monitoring
+            volumeButtonManager.setupVolumeMonitoring()
+        }
+        .onDisappear {
+            volumeButtonManager.stopVolumeMonitoring()
         }
     }
     
