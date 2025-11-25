@@ -15,12 +15,11 @@ struct MainView: View {
     @EnvironmentObject var authStateObserver: AuthStateObserver
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @StateObject private var geminiService = GeminiService()
-    @StateObject private var cameraManager = PersistentCameraManager.shared
+    @StateObject private var cameraManager = CameraManager()
     @StateObject private var volumeButtonManager = VolumeButtonManager()
     
     // TrueDepth Integration
     @State private var isVolumeMode = false
-    @StateObject private var trueDepthManager = CameraManager()
     @State private var showingTrueDepthOverlay = false
     
     // UI State
@@ -159,15 +158,15 @@ struct MainView: View {
             SubscriptionView(onDismiss: { showingSubscriptionView = false })
         }
         .fullScreenCover(isPresented: $showingTrueDepthOverlay) {
-            if let depthImage = trueDepthManager.capturedDepthImage {
+            if let depthImage = cameraManager.capturedDepthImage {
                 AutoFlowOverlayView(
                     depthImage: depthImage,
-                    photo: trueDepthManager.capturedPhoto,
-                    cameraManager: trueDepthManager,
+                    photo: cameraManager.capturedPhoto,
+                    cameraManager: cameraManager,
                     onComplete: {
                         showingTrueDepthOverlay = false
-                        trueDepthManager.capturedDepthImage = nil
-                        trueDepthManager.capturedPhoto = nil
+                        cameraManager.capturedDepthImage = nil
+                        cameraManager.capturedPhoto = nil
                     }
                 )
             }
@@ -208,17 +207,9 @@ struct MainView: View {
             checkAndPresentRequiredViews()
         }
         .onChange(of: isVolumeMode) { _, newValue in
-            if newValue {
-                // Switching to Volume mode
-                cameraManager.stopSession()
-                trueDepthManager.startSession()
-            } else {
-                // Switching back to Standard mode
-                trueDepthManager.stopSession()
-                cameraManager.startSession()
-            }
+            cameraManager.switchMode(to: newValue ? .volume : .standard)
         }
-        .onChange(of: trueDepthManager.capturedDepthImage) { _, newImage in
+        .onChange(of: cameraManager.capturedDepthImage) { _, newImage in
             if newImage != nil && isVolumeMode {
                 showingTrueDepthOverlay = true
             }
@@ -235,11 +226,11 @@ struct MainView: View {
                         if !isWeighing {
                             if isVolumeMode {
                                 // Trigger TrueDepth flow
-                                trueDepthManager.captureDepthAndPhoto()
+                                cameraManager.captureDepthAndPhoto()
                             } else {
                                 // Standard flow
                                 shouldAnalyzeAfterCapture = true
-                                cameraManager.capturePhoto()
+                                cameraManager.capturePhotoStandard()
                             }
                         }
                     }
@@ -330,8 +321,7 @@ struct MainView: View {
         ZStack {
             FlexibleCameraPreview(
                 isVolumeMode: isVolumeMode,
-                persistentManager: cameraManager,
-                trueDepthManager: trueDepthManager,
+                cameraManager: cameraManager,
                 onImageCaptured: handleImageCaptured,
                 onTap: handleCameraTap
             )
@@ -513,11 +503,11 @@ struct MainView: View {
                         if !isWeighing {
                             if isVolumeMode {
                                 // Trigger TrueDepth flow
-                                trueDepthManager.captureDepthAndPhoto()
+                                cameraManager.captureDepthAndPhoto()
                             } else {
                                 // Standard flow
                                 shouldAnalyzeAfterCapture = true
-                                cameraManager.capturePhoto()
+                                cameraManager.capturePhotoStandard()
                             }
                         }
                     }
@@ -829,8 +819,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 // MARK: - Flexible Camera Preview
 struct FlexibleCameraPreview: UIViewRepresentable {
     let isVolumeMode: Bool
-    @ObservedObject var persistentManager: PersistentCameraManager
-    @ObservedObject var trueDepthManager: CameraManager
+    @ObservedObject var cameraManager: CameraManager
     let onImageCaptured: ((UIImage) -> Void)?
     let onTap: ((CGPoint) -> Void)?
     
@@ -840,7 +829,7 @@ struct FlexibleCameraPreview: UIViewRepresentable {
         
         // Set up image capture callback for standard mode
         if !isVolumeMode {
-            persistentManager.onImageCaptured = onImageCaptured
+            cameraManager.onImageCaptured = onImageCaptured
         }
         
         // Add tap gesture if provided
@@ -853,9 +842,9 @@ struct FlexibleCameraPreview: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
-        // Update preview layer if mode changed
+        // Update preview layer if needed
         let currentSession = uiView.previewLayer?.session
-        let targetSession = isVolumeMode ? trueDepthManager.session : persistentManager.getPreviewLayer().session
+        let targetSession = cameraManager.session
         
         if currentSession !== targetSession {
             updatePreviewLayer(for: uiView)
@@ -868,13 +857,8 @@ struct FlexibleCameraPreview: UIViewRepresentable {
         // Remove old layer
         view.previewLayer?.removeFromSuperlayer()
         
-        // Add new layer based on mode
-        let previewLayer: AVCaptureVideoPreviewLayer
-        if isVolumeMode {
-            previewLayer = AVCaptureVideoPreviewLayer(session: trueDepthManager.session)
-        } else {
-            previewLayer = persistentManager.getPreviewLayer()
-        }
+        // Add new layer from unified manager
+        let previewLayer = cameraManager.getPreviewLayer()
         previewLayer.videoGravity = .resizeAspectFill
         
         view.layer.addSublayer(previewLayer)
@@ -901,7 +885,7 @@ struct FlexibleCameraPreview: UIViewRepresentable {
             
             if let view = gesture.view {
                 DispatchQueue.global(qos: .userInitiated).async {
-                    PersistentCameraManager.shared.setFocus(at: point, in: view)
+                    self.parent.cameraManager.setFocus(at: point, in: view)
                 }
             }
         }
