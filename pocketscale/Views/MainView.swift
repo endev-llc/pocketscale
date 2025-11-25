@@ -40,6 +40,7 @@ struct MainView: View {
     @State private var showingSubscriptionView = false
     @State private var showingCameraPermission = false
     @State private var showingPreferences = false // New state for preferences view
+    @State private var volumeModeCapturing = false
 
 
     // Animation States
@@ -263,6 +264,9 @@ struct MainView: View {
         }
         .onChange(of: cameraManager.capturedDepthImage) { _, newImage in
             if newImage != nil && isVolumeMode {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    volumeModeCapturing = false
+                }
                 showingTrueDepthOverlay = true
             }
         }
@@ -278,6 +282,7 @@ struct MainView: View {
                         if !isWeighing {
                             if isVolumeMode {
                                 // Trigger TrueDepth flow
+                                volumeModeCapturing = true
                                 cameraManager.captureDepthAndPhoto()
                             } else {
                                 // Standard flow
@@ -371,28 +376,37 @@ struct MainView: View {
     // MODIFIED: This view has been refactored to fix the layout bug.
     private var cameraView: some View {
         ZStack {
-            FlexibleCameraPreview(
-                isVolumeMode: isVolumeMode,
-                cameraManager: cameraManager,
-                onImageCaptured: handleImageCaptured,
-                onTap: handleCameraTap
-            )
-            .overlay {
-                if let image = capturedImage, !isVolumeMode {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .onTapGesture {
-                            if !isWeighing && !showWeight {
-                                capturedImage = nil
-                                shouldAnalyzeAfterCapture = false
+            if !volumeModeCapturing {
+                FlexibleCameraPreview(
+                    isVolumeMode: isVolumeMode,
+                    cameraManager: cameraManager,
+                    onImageCaptured: handleImageCaptured,
+                    onTap: handleCameraTap
+                )
+                .overlay {
+                    if let image = capturedImage, !isVolumeMode {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .onTapGesture {
+                                if !isWeighing && !showWeight {
+                                    capturedImage = nil
+                                    shouldAnalyzeAfterCapture = false
+                                }
                             }
-                        }
+                    }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-            .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
-            .rotation3DEffect(.degrees(cameraRotation), axis: (x: 0, y: 1, z: 0))
+            
+            if volumeModeCapturing {
+                Color.black
+            }
+            
+            Group {
+                if !volumeModeCapturing {
+                    EmptyView()
+                }
+            }
             .overlay(
                 Group {
                     if showingFocusIndicator {
@@ -403,21 +417,25 @@ struct MainView: View {
                 }
             )
             
-            if isWeighing {
+            if isWeighing || volumeModeCapturing {
                 ZStack {
                     Color.black.opacity(0.4)
                     VStack(spacing: 12) {
                         ProgressView().tint(.white)
-                        Text("Analyzing...")
+                        Text(volumeModeCapturing ? "Capturing..." : "Analyzing...")
                             .font(.system(size: 16, weight: .medium, design: .rounded))
                             .foregroundColor(.white)
                     }
                 }
+                .rotation3DEffect(.degrees(-cameraRotation), axis: (x: 0, y: 1, z: 0))
                 .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
                 .transition(.opacity)
             }
         }
         .frame(height: 330)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
+        .rotation3DEffect(.degrees(cameraRotation), axis: (x: 0, y: 1, z: 0))
     }
 
     private func weightResultsView(for result: WeightAnalysisResponse) -> some View {
@@ -556,6 +574,7 @@ struct MainView: View {
                         if !isWeighing {
                             if isVolumeMode {
                                 // Trigger TrueDepth flow
+                                volumeModeCapturing = true
                                 cameraManager.captureDepthAndPhoto()
                             } else {
                                 // Standard flow
