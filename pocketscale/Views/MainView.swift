@@ -396,26 +396,20 @@ struct MainView: View {
                             }
                     }
                 }
+                .overlay(
+                    Group {
+                        if showingFocusIndicator {
+                            FocusIndicator()
+                                .position(focusPoint)
+                                .transition(.opacity.animation(.easeInOut(duration: 0.2)))
+                        }
+                    }
+                )
             }
             
             if volumeModeCapturing {
                 Color.black
             }
-            
-            Group {
-                if !volumeModeCapturing {
-                    EmptyView()
-                }
-            }
-            .overlay(
-                Group {
-                    if showingFocusIndicator {
-                        FocusIndicator()
-                            .position(focusPoint)
-                            .transition(.opacity.animation(.easeInOut(duration: 0.2)))
-                    }
-                }
-            )
             
             if isWeighing || volumeModeCapturing {
                 ZStack {
@@ -950,8 +944,6 @@ struct FlexibleCameraPreview: UIViewRepresentable {
         }
         
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-            guard !parent.isVolumeMode else { return } // Only handle tap in standard mode
-            
             let point = gesture.location(in: gesture.view)
             parent.onTap?(point)
             
