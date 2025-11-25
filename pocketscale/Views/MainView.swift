@@ -47,6 +47,8 @@ struct MainView: View {
     @State private var showingFocusIndicator = false
     @State private var isAnimatingIn = false
     
+    @Namespace private var animationNamespace
+    
     // User Preferences
     @AppStorage("unitPreference") private var unitPreference: UnitPreference = .ounces
 
@@ -77,11 +79,57 @@ struct MainView: View {
                         .zIndex(1)
 
                     // Mode Toggle
-                    Picker("Mode", selection: $isVolumeMode) {
-                        Text("Standard").tag(false)
-                        Text("Volume").tag(true)
+                    HStack(spacing: 0) {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isVolumeMode = false
+                            }
+                        }) {
+                            Text("Standard")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(!isVolumeMode ? .white : .primary)
+                                .frame(height: 36)
+                                .padding(.horizontal, 20)
+                                .background(
+                                    ZStack {
+                                        if !isVolumeMode {
+                                            Capsule()
+                                                .fill(Color.accentColor)
+                                                .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
+                                        }
+                                    }
+                                )
+                        }
+                        
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isVolumeMode = true
+                            }
+                        }) {
+                            Text("Volume")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(isVolumeMode ? .white : .primary)
+                                .frame(height: 36)
+                                .padding(.horizontal, 20)
+                                .background(
+                                    ZStack {
+                                        if isVolumeMode {
+                                            Capsule()
+                                                .fill(Color.accentColor)
+                                                .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
+                                        }
+                                    }
+                                )
+                        }
                     }
-                    .pickerStyle(.segmented)
+                    .padding(4)
+                    .background(Color(.systemBackground).opacity(0.8))
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .opacity(isAnimatingIn ? 1 : 0)
