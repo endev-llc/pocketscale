@@ -46,6 +46,7 @@ struct MainView: View {
     @State private var focusPoint: CGPoint = .zero
     @State private var showingFocusIndicator = false
     @State private var isAnimatingIn = false
+    @State private var cameraRotation: Double = 0
     
     @Namespace private var animationNamespace
     
@@ -85,7 +86,7 @@ struct MainView: View {
                                 isVolumeMode = false
                             }
                         }) {
-                            Text("Standard")
+                            Text("Weight")
                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .foregroundColor(!isVolumeMode ? .white : .primary)
                                 .frame(height: 36)
@@ -106,7 +107,7 @@ struct MainView: View {
                                 isVolumeMode = true
                             }
                         }) {
-                            Text("Volume")
+                            Text("3D Volume")
                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .foregroundColor(isVolumeMode ? .white : .primary)
                                 .frame(height: 36)
@@ -255,6 +256,9 @@ struct MainView: View {
             checkAndPresentRequiredViews()
         }
         .onChange(of: isVolumeMode) { _, newValue in
+            withAnimation(.easeInOut(duration: 0.6)) {
+                cameraRotation += 180
+            }
             cameraManager.switchMode(to: newValue ? .volume : .standard)
         }
         .onChange(of: cameraManager.capturedDepthImage) { _, newImage in
@@ -388,6 +392,7 @@ struct MainView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
             .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
+            .rotation3DEffect(.degrees(cameraRotation), axis: (x: 0, y: 1, z: 0))
             .overlay(
                 Group {
                     if showingFocusIndicator {
