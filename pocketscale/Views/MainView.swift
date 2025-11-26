@@ -41,8 +41,8 @@ struct MainView: View {
     @State private var showingCameraPermission = false
     @State private var showingPreferences = false // New state for preferences view
     @State private var volumeModeCapturing = false
-
-
+    
+    
     // Animation States
     @State private var focusPoint: CGPoint = .zero
     @State private var showingFocusIndicator = false
@@ -53,8 +53,8 @@ struct MainView: View {
     
     // User Preferences
     @AppStorage("unitPreference") private var unitPreference: UnitPreference = .ounces
-
-
+    
+    
     var body: some View {
         ZStack {
             // Elegant gradient background
@@ -68,102 +68,110 @@ struct MainView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // MARK: - Top Centered Zone
+            
+            ScrollView {
                 VStack(spacing: 0) {
-                    headerView
-                        .padding(.horizontal, 24)
-                        .padding(.top, 20)
-                        .padding(.bottom, 20)
-                        .opacity(isAnimatingIn ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.5), value: isAnimatingIn)
-                        .zIndex(1)
-
-                    // Mode Toggle
-                    HStack(spacing: 0) {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                isVolumeMode = false
-                            }
-                        }) {
-                            Text("Weight")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundColor(!isVolumeMode ? .white : .primary)
-                                .frame(height: 36)
-                                .padding(.horizontal, 20)
-                                .background(
-                                    ZStack {
-                                        if !isVolumeMode {
-                                            Capsule()
-                                                .fill(Color.accentColor)
-                                                .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
+                    // MARK: - Top Centered Zone
+                    VStack(spacing: 0) {
+                        headerView
+                            .padding(.horizontal, 24)
+                            .padding(.top, 20)
+                            .padding(.bottom, 20)
+                            .opacity(isAnimatingIn ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.5), value: isAnimatingIn)
+                            .zIndex(1)
+                        
+                        // Mode Toggle
+                        HStack(spacing: 0) {
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    isVolumeMode = false
+                                }
+                            }) {
+                                Text("Weight")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(!isVolumeMode ? .white : .primary)
+                                    .frame(height: 36)
+                                    .padding(.horizontal, 20)
+                                    .background(
+                                        ZStack {
+                                            if !isVolumeMode {
+                                                Capsule()
+                                                    .fill(Color.accentColor)
+                                                    .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                            }
+                            
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    isVolumeMode = true
+                                }
+                            }) {
+                                Text("3D Volume")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(isVolumeMode ? .white : .primary)
+                                    .frame(height: 36)
+                                    .padding(.horizontal, 20)
+                                    .background(
+                                        ZStack {
+                                            if isVolumeMode {
+                                                Capsule()
+                                                    .fill(Color.accentColor)
+                                                    .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
+                                            }
+                                        }
+                                    )
+                            }
+                        }
+                        .padding(4)
+                        .background(Color(.systemBackground).opacity(0.8))
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                        )
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .opacity(isAnimatingIn ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.5).delay(0.1), value: isAnimatingIn)
+                        
+                        if !showWeight || analysisResult == nil {
+                            Spacer()
+                                .frame(height: 60)
                         }
                         
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                isVolumeMode = true
-                            }
-                        }) {
-                            Text("3D Volume")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundColor(isVolumeMode ? .white : .primary)
-                                .frame(height: 36)
-                                .padding(.horizontal, 20)
-                                .background(
-                                    ZStack {
-                                        if isVolumeMode {
-                                            Capsule()
-                                                .fill(Color.accentColor)
-                                                .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
-                                        }
-                                    }
-                                )
+                        cameraView
+                            .padding(.horizontal, 24)
+                            .opacity(isAnimatingIn ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.5).delay(0.2), value: isAnimatingIn)
+                        
+                        if !showWeight || analysisResult == nil {
+                            Spacer()
+                                .frame(height: 72)
                         }
                     }
-                    .padding(4)
-                    .background(Color(.systemBackground).opacity(0.8))
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                    )
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .opacity(isAnimatingIn ? 1 : 0)
-                    .animation(.easeInOut(duration: 0.5).delay(0.1), value: isAnimatingIn)
-
-                    Spacer()
-
-                    cameraView
-                        .padding(.horizontal, 24)
-                        .opacity(isAnimatingIn ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.5).delay(0.2), value: isAnimatingIn)
                     
-                    Spacer()
-                }
-
-                // MARK: - Bottom Card Zone
-                if showWeight, let result = analysisResult {
-                    weightResultsView(for: result)
+                    // MARK: - Bottom Card Zone
+                    if showWeight, let result = analysisResult {
+                        weightResultsView(for: result)
                         // Added padding to create more space below the camera view.
-                        .padding(.top, 12)
-                        .padding(.horizontal, 24)
-                        .padding(.bottom)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .bottom).combined(with: .opacity),
-                            removal: .move(edge: .bottom).combined(with: .opacity)
-                        ))
-                } else {
-                    footerActionsView
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 40)
-                        .opacity(isAnimatingIn ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.5).delay(0.4), value: isAnimatingIn)
+                            .padding(.top, 12)
+                            .padding(.horizontal, 24)
+                            .padding(.bottom)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .move(edge: .bottom).combined(with: .opacity)
+                            ))
+                    } else {
+                        footerActionsView
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 40)
+                            .opacity(isAnimatingIn ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.5).delay(0.4), value: isAnimatingIn)
+                    }
                 }
             }
         }
