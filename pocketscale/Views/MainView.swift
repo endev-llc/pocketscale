@@ -336,51 +336,51 @@ struct MainView: View {
     }
     
     // MARK: - Child Views
-
+    
     private var headerView: some View {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("PocketScale")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                    Text("Camera-based food scale")
-                        .font(.system(size: 15, weight: .regular, design: .rounded))
-                        .foregroundColor(.secondary)
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("PocketScale")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                Text("Camera-based food scale")
+                    .font(.system(size: 15, weight: .regular, design: .rounded))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Scan History Button - requires auth
+            Button(action: {
+                if authStateObserver.user == nil {
+                    showingAuthView = true
+                } else {
+                    showingScanHistory.toggle()
                 }
-
-                Spacer()
-                
-                // Scan History Button - requires auth
-                Button(action: {
-                    if authStateObserver.user == nil {
-                        showingAuthView = true
-                    } else {
-                        showingScanHistory.toggle()
-                    }
-                }) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(Color(.systemBackground).opacity(0.5))
-                        .clipShape(Circle())
-                }
-
-                // Settings Button
-                Button(action: { showingSettings.toggle() }) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(Color(.systemBackground).opacity(0.5))
-                        .clipShape(Circle())
-                }
-                .popover(isPresented: $showingSettings) {
-                    settingsMenu.presentationCompactAdaptation(.popover)
-                }
+            }) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(Color(.systemBackground).opacity(0.5))
+                    .clipShape(Circle())
+            }
+            
+            // Settings Button
+            Button(action: { showingSettings.toggle() }) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(Color(.systemBackground).opacity(0.5))
+                    .clipShape(Circle())
+            }
+            .popover(isPresented: $showingSettings) {
+                settingsMenu.presentationCompactAdaptation(.popover)
             }
         }
-
+    }
+    
     // MODIFIED: This view has been refactored to fix the layout bug.
     private var cameraView: some View {
         ZStack {
@@ -439,7 +439,7 @@ struct MainView: View {
         .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
         .rotation3DEffect(.degrees(cameraRotation), axis: (x: 0, y: 1, z: 0))
     }
-
+    
     private func weightResultsView(for result: WeightAnalysisResponse) -> some View {
         VStack(spacing: 24) {
             HStack {
@@ -451,7 +451,7 @@ struct MainView: View {
                     .foregroundColor(.primary)
                 Spacer()
             }
-
+            
             HStack(alignment: .bottom, spacing: 8) {
                 if unitPreference == .grams {
                     Text("\(result.total_weight_grams)")
@@ -484,7 +484,7 @@ struct MainView: View {
                 }
                 Spacer()
             }
-
+            
             VStack(spacing: 16) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -499,9 +499,9 @@ struct MainView: View {
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-
+                    
                     Spacer()
-
+                    
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("CONFIDENCE")
                             .font(.system(size: 11, weight: .medium))
@@ -517,7 +517,7 @@ struct MainView: View {
                         }
                     }
                 }
-
+                
                 HStack(spacing: 12) {
                     Button(action: {
                         isShowingShareSheet = true
@@ -534,7 +534,7 @@ struct MainView: View {
                         .background(Color.blue)
                         .cornerRadius(14)
                     }
-
+                    
                     Button(action: resetView) {
                         Image(systemName: "xmark.circle")
                             .font(.system(size: 23, weight: .medium))
@@ -551,7 +551,7 @@ struct MainView: View {
         .cornerRadius(24)
         .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 8)
     }
-
+    
     private var footerActionsView: some View {
         HStack(spacing: 20) {
             Button(action: { cameraManager.toggleFlash() }) {
@@ -562,9 +562,9 @@ struct MainView: View {
                     .background(Color(.systemBackground).opacity(0.5))
                     .clipShape(Circle())
             }
-
+            
             Spacer()
-
+            
             // MODIFIED: Check auth first, then subscription
             Button(action: {
                 if authStateObserver.user == nil {
@@ -600,7 +600,7 @@ struct MainView: View {
                         .frame(width: 80, height: 80)
                 }
             }
-
+            
             Spacer()
             
             // MODIFIED: Check auth first, then subscription
@@ -630,76 +630,76 @@ struct MainView: View {
     }
     
     private var settingsMenu: some View {
-            VStack(alignment: .leading, spacing: 0) {
-                
-                // Preferences Button - always available
+        VStack(alignment: .leading, spacing: 0) {
+            
+            // Preferences Button - always available
+            Button(action: {
+                showingSettings = false
+                showingPreferences = true
+            }) {
+                HStack {
+                    Image(systemName: "slider.horizontal.3")
+                    Text("Preferences")
+                }
+                .padding()
+            }
+            
+            if authStateObserver.user == nil {
+                // Menu for unauthenticated users
+                Divider()
                 Button(action: {
                     showingSettings = false
-                    showingPreferences = true
+                    showingAuthView = true
                 }) {
                     HStack {
-                        Image(systemName: "slider.horizontal.3")
-                        Text("Preferences")
+                        Image(systemName: "person.crop.circle.badge.plus")
+                        Text("Sign In")
                     }
                     .padding()
                 }
-
-                if authStateObserver.user == nil {
-                    // Menu for unauthenticated users
-                    Divider()
-                    Button(action: {
-                        showingSettings = false
-                        showingAuthView = true
-                    }) {
-                        HStack {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                            Text("Sign In")
-                        }
-                        .padding()
+            } else {
+                // Menu for authenticated users
+                Divider()
+                Button(action: {
+                    showingSettings = false
+                    showingFeedbackSheet = true
+                }) {
+                    HStack {
+                        Image(systemName: "envelope")
+                        Text("Send Us Feedback")
                     }
-                } else {
-                    // Menu for authenticated users
-                    Divider()
-                    Button(action: {
-                        showingSettings = false
-                        showingFeedbackSheet = true
-                    }) {
-                        HStack {
-                            Image(systemName: "envelope")
-                            Text("Send Us Feedback")
-                        }
-                        .padding()
+                    .padding()
+                }
+                Divider()
+                Button(action: {
+                    signOut()
+                    showingSettings = false
+                }) {
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Text("Sign Out")
                     }
-                    Divider()
-                    Button(action: {
-                        signOut()
-                        showingSettings = false
-                    }) {
-                        HStack {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                            Text("Sign Out")
-                        }
-                        .foregroundColor(.red)
-                        .padding()
+                    .foregroundColor(.red)
+                    .padding()
+                }
+                Divider()
+                Button(action: {
+                    showingSettings = false
+                    showingDeleteConfirmation = true
+                }) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("Delete Account")
                     }
-                    Divider()
-                    Button(action: {
-                        showingSettings = false
-                        showingDeleteConfirmation = true
-                    }) {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Delete Account")
-                        }
-                        .foregroundColor(.red)
-                        .padding()
-                    }
+                    .foregroundColor(.red)
+                    .padding()
                 }
             }
         }
-
+    }
+    
     // MARK: - Methods
-
+    
     private func handleImageCaptured(_ image: UIImage) {
         // Turn flash off after image is captured
         cameraManager.turnFlashOff()
@@ -731,12 +731,12 @@ struct MainView: View {
             shouldAnalyzeAfterCapture = false
         }
     }
-
+    
     private func startMeasurement() {
         guard let image = capturedImage else { return }
         
         withAnimation(.easeInOut) { isWeighing = true }
-
+        
         Task {
             do {
                 let result = try await geminiService.analyzeFood(image: image)
@@ -756,7 +756,7 @@ struct MainView: View {
                         await saveScan(result: result, image: image)
                     }
                 }
-
+                
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
@@ -766,20 +766,20 @@ struct MainView: View {
             }
         }
     }
-
+    
     private func saveScan(result: WeightAnalysisResponse, image: UIImage) async {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-
+        
         // 1. Upload image to Firebase Storage
         guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
         let storageRef = Storage.storage().reference()
         let imageId = UUID().uuidString
         let imageRef = storageRef.child("scans/\(userId)/\(imageId).jpg")
-
+        
         do {
             _ = try await imageRef.putDataAsync(imageData)
             let downloadURL = try await imageRef.downloadURL()
-
+            
             // 2. Prepare scan data for Firestore
             let scanData: [String: Any] = [
                 "userId": userId,
@@ -790,23 +790,23 @@ struct MainView: View {
                 "total_weight_grams": result.total_weight_grams,
                 "confidence_percentage": result.confidence_percentage
             ]
-
+            
             // 3. Save to Firestore using a batch write for atomicity
             let db = Firestore.firestore()
             let batch = db.batch()
-
+            
             // Path for root `scans` collection
             let rootScanRef = db.collection("scans").document()
             
             // Path for user's subcollection `userScans`
             let userScanRef = db.collection("users").document(userId).collection("userScans").document(rootScanRef.documentID)
-
+            
             batch.setData(scanData, forDocument: rootScanRef)
             batch.setData(scanData, forDocument: userScanRef)
-
+            
             try await batch.commit()
             print("✅ Scan saved successfully to both collections.")
-
+            
         } catch {
             print("❌ Failed to save scan: \(error.localizedDescription)")
             // Optionally update UI to show this specific error
@@ -839,10 +839,10 @@ struct MainView: View {
             self.showingError = true
             return
         }
-
+        
         let db = Firestore.firestore()
         let userDocRef = db.collection("users").document(user.uid)
-
+        
         // 1. Delete Firestore document
         userDocRef.delete { error in
             if let error = error {
@@ -850,7 +850,7 @@ struct MainView: View {
                 self.showingError = true
                 return
             }
-
+            
             // 2. Delete Firebase Auth user
             user.delete { error in
                 if let error = error {
@@ -881,12 +881,12 @@ struct FocusIndicator: View {
 struct ShareSheet: UIViewControllerRepresentable {
     var activityItems: [Any]
     var applicationActivities: [UIActivity]? = nil
-
+    
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
         return controller
     }
-
+    
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
