@@ -17,6 +17,52 @@ enum CameraMode {
     case volume    // Front TrueDepth camera for depth + photo
 }
 
+// MARK: - Flash Overlay Window
+class FlashOverlayWindow: UIWindow {
+    static let shared = FlashOverlayWindow()
+    private var originalBrightness: CGFloat = 0
+    
+    private init() {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            super.init(frame: windowScene.coordinateSpace.bounds)
+            self.windowScene = windowScene
+        } else {
+            super.init(frame: UIScreen.main.bounds)
+        }
+        self.windowLevel = .alert + 1
+        self.isHidden = true
+        self.backgroundColor = .clear
+        
+        let flashView = UIView(frame: self.bounds)
+        flashView.backgroundColor = .white
+        flashView.tag = 999
+        self.addSubview(flashView)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func flash(duration: TimeInterval = 1.0) {
+        guard let flashView = self.viewWithTag(999) else { return }
+        
+        // Store original brightness and crank it to maximum
+        originalBrightness = UIScreen.main.brightness
+        UIScreen.main.brightness = 1.0
+        
+        self.isHidden = false
+        flashView.alpha = 1.0  // Instant full brightness
+        
+        // Hold at full brightness for the duration
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            flashView.alpha = 0
+            self.isHidden = true
+            // Restore original brightness
+            UIScreen.main.brightness = self.originalBrightness
+        }
+    }
+}
+
 // MARK: - Enhanced Camera Manager
 class CameraManager: NSObject, ObservableObject, AVCaptureDepthDataOutputDelegate, AVCapturePhotoCaptureDelegate {
     // ========== EXISTING PROPERTIES (UNCHANGED) ==========
@@ -370,6 +416,15 @@ class CameraManager: NSObject, ObservableObject, AVCaptureDepthDataOutputDelegat
     
     // ========== NEW: FLASH CONTROL ==========
     func toggleFlash() {
+        // For volume mode (front camera), just toggle the state without hardware control
+        if mode == .volume {
+            DispatchQueue.main.async {
+                self.isFlashEnabled.toggle()
+            }
+            return
+        }
+        
+        // For standard mode (back camera), control hardware torch
         guard let device = currentDevice, device.hasTorch else { return }
         
         do {
@@ -768,6 +823,21 @@ class CameraManager: NSObject, ObservableObject, AVCaptureDepthDataOutputDelegat
             self.isEncodingImages = false
         }
         
+        // Trigger flash if enabled (for volume mode with front camera)
+        if isFlashEnabled && mode == .volume {
+            DispatchQueue.main.async {
+                FlashOverlayWindow.shared.flash(duration: 1.0)
+            }
+            // Delay capture to middle of flash duration
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.performDepthCapture()
+            }
+        } else {
+            performDepthCapture()
+        }
+    }
+
+    private func performDepthCapture() {
         let settings = AVCapturePhotoSettings()
         settings.isDepthDataDeliveryEnabled = true
         
