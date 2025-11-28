@@ -603,7 +603,7 @@ struct MainView: View {
             
             Spacer()
             
-            // MODIFIED: Check auth first, then subscription
+            // MODIFIED: Invisible placeholder when in Volume mode
             Button(action: {
                 if authStateObserver.user == nil {
                     showingAuthView = true
@@ -623,6 +623,8 @@ struct MainView: View {
                     .background(Color(.systemBackground).opacity(0.5))
                     .clipShape(Circle())
             }
+            .opacity(isVolumeMode ? 0 : 1)
+            .disabled(isVolumeMode)
         }
         .disabled(isWeighing || showWeight)
         .opacity(isWeighing || showWeight ? 0 : 1)
