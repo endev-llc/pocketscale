@@ -15,11 +15,15 @@ struct MainView: View {
     @EnvironmentObject var authStateObserver: AuthStateObserver
     @EnvironmentObject var subscriptionManager: SubscriptionManager
     @StateObject private var geminiService = GeminiService()
-    @StateObject private var cameraManager = CameraManager()
     @StateObject private var volumeButtonManager = VolumeButtonManager()
+    @StateObject private var cameraManager = {
+        let manager = CameraManager()
+        manager.switchMode(to: .volume)
+        return manager
+    }()
     
     // TrueDepth Integration
-    @State private var isVolumeMode = false
+    @State private var isVolumeMode = true
     @State private var showingTrueDepthOverlay = false
     
     // UI State
@@ -85,27 +89,6 @@ struct MainView: View {
                         HStack(spacing: 0) {
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.3)) {
-                                    isVolumeMode = false
-                                }
-                            }) {
-                                Text("Weight")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(!isVolumeMode ? .white : .primary)
-                                    .frame(height: 36)
-                                    .padding(.horizontal, 20)
-                                    .background(
-                                        ZStack {
-                                            if !isVolumeMode {
-                                                Capsule()
-                                                    .fill(Color.accentColor)
-                                                    .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
-                                            }
-                                        }
-                                    )
-                            }
-                            
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
                                     isVolumeMode = true
                                 }
                             }) {
@@ -117,6 +100,27 @@ struct MainView: View {
                                     .background(
                                         ZStack {
                                             if isVolumeMode {
+                                                Capsule()
+                                                    .fill(Color.accentColor)
+                                                    .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
+                                            }
+                                        }
+                                    )
+                            }
+                            
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    isVolumeMode = false
+                                }
+                            }) {
+                                Text("Weight")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(!isVolumeMode ? .white : .primary)
+                                    .frame(height: 36)
+                                    .padding(.horizontal, 20)
+                                    .background(
+                                        ZStack {
+                                            if !isVolumeMode {
                                                 Capsule()
                                                     .fill(Color.accentColor)
                                                     .matchedGeometryEffect(id: "modeTab", in: animationNamespace)
@@ -265,9 +269,19 @@ struct MainView: View {
             checkAndPresentRequiredViews()
         }
         .onChange(of: isVolumeMode) { _, newValue in
-            withAnimation(.easeInOut(duration: 0.6)) {
-                cameraRotation += 180
+            // Flip out to edge (90 degrees - view is edge-on/invisible)
+            withAnimation(.easeIn(duration: 0.3)) {
+                cameraRotation = 90
             }
+            
+            // At midpoint, jump to other side and flip back in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                cameraRotation = -90 // Instant jump (invisible at edge)
+                withAnimation(.easeOut(duration: 0.3)) {
+                    cameraRotation = 0
+                }
+            }
+            
             cameraManager.switchMode(to: newValue ? .volume : .standard)
         }
         .onChange(of: cameraManager.capturedDepthImage) { _, newImage in
@@ -903,10 +917,8 @@ struct FlexibleCameraPreview: UIViewRepresentable {
         let previewView = CameraPreviewUIView()
         updatePreviewLayer(for: previewView)
         
-        // Set up image capture callback for standard mode
-        if !isVolumeMode {
-            cameraManager.onImageCaptured = onImageCaptured
-        }
+        // Always set up image capture callback (used in standard mode)
+        cameraManager.onImageCaptured = onImageCaptured
         
         // Add tap gesture if provided
         if onTap != nil {
@@ -925,6 +937,9 @@ struct FlexibleCameraPreview: UIViewRepresentable {
         if currentSession !== targetSession {
             updatePreviewLayer(for: uiView)
         }
+        
+        // Always update callback to handle mode switches
+        cameraManager.onImageCaptured = onImageCaptured
         
         uiView.previewLayer?.frame = uiView.bounds
     }
